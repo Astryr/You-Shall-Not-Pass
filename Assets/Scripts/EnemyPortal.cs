@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+// Punto de spawn: hijos con Waypoint definen el camino (spawn → meta); instancia enemigos desde pool según la oleada.
 public class EnemyPortal : MonoBehaviour
 {
     private ObjectPoolManager objectPool;
@@ -18,7 +19,9 @@ public class EnemyPortal : MonoBehaviour
     [Space]
 
     [SerializeField] private List<Waypoint> waypointList;
-    public Vector3[] currentWaypints { get; private set; }
+
+    /// <summary>Posiciones ordenadas de la ruta (hijos Waypoint, de spawn a objetivo).</summary>
+    public Vector3[] CurrentWaypoints { get; private set; }
 
     private List<GameObject> enemiesToCreate = new List<GameObject>();
     private List<GameObject> activeEnemies = new List<GameObject>();
@@ -64,10 +67,19 @@ public class EnemyPortal : MonoBehaviour
 
     private void CreateEnemy()
     {
+        if (objectPool == null)
+            objectPool = ObjectPoolManager.instance;
+
         GameObject randomEnemy = GetRandomEnemy();
         GameObject newEnemy = objectPool.Get(randomEnemy, transform.position, Quaternion.identity);
 
         Enemy enemyScript = newEnemy.GetComponent<Enemy>();
+        if (enemyScript == null)
+        {
+            Debug.LogError("Prefab sin componente Enemy.", newEnemy);
+            return;
+        }
+
         enemyScript.SetupEnemy(this);
 
         PlaceEnemyAtFlyPortalIfNeeded(newEnemy, enemyScript.GetEnemyType());
@@ -76,10 +88,10 @@ public class EnemyPortal : MonoBehaviour
 
     private void PlaceEnemyAtFlyPortalIfNeeded(GameObject newEnemy, EnemyType enemyType)
     {
-        if (enemyType != EnemyType.Flying)
+        if (enemyType != EnemyType.Flying || flyPortalFx == null)
             return;
 
-        if(flyPortalFxCo != null)
+        if (flyPortalFxCo != null)
             StopCoroutine(flyPortalFxCo);
 
         flyPortalFxCo = StartCoroutine(EnableFlyPortalFxCo());
@@ -88,6 +100,9 @@ public class EnemyPortal : MonoBehaviour
 
     private IEnumerator EnableFlyPortalFxCo()
     {
+        if (flyPortalFx == null)
+            yield break;
+
         flyPortalFx.Play();
 
         yield return new WaitForSeconds(2);
@@ -98,20 +113,20 @@ public class EnemyPortal : MonoBehaviour
     private GameObject GetRandomEnemy()
     {
         int randomIndex = Random.Range(0, enemiesToCreate.Count);
-        GameObject choosenEnemy = enemiesToCreate[randomIndex];
+        GameObject chosenEnemy = enemiesToCreate[randomIndex];
 
-        enemiesToCreate.Remove(choosenEnemy);
+        enemiesToCreate.Remove(chosenEnemy);
 
-        return choosenEnemy;
+        return chosenEnemy;
     }
 
     public void AddEnemy(GameObject enemyToAdd) => enemiesToCreate.Add(enemyToAdd);
     public void RemoveActiveEnemy(GameObject enemyToRemove)
     {
-        if(activeEnemies.Contains(enemyToRemove))
+        if (activeEnemies.Contains(enemyToRemove))
             activeEnemies.Remove(enemyToRemove);
 
-        myWaveManager.CheckIfWaveCompleted();
+        myWaveManager?.CheckIfWaveCompleted();
     }
 
     public List<GameObject> GetActiveEnemies() => activeEnemies;
@@ -129,11 +144,9 @@ public class EnemyPortal : MonoBehaviour
                 waypointList.Add(waypoint);
         }
 
-        currentWaypints = new Vector3[waypointList.Count];
+        CurrentWaypoints = new Vector3[waypointList.Count];
 
-        for (int i = 0; i < currentWaypints.Length; i++)
-        {
-            currentWaypints[i] = waypointList[i].transform.position;
-        }
+        for (int i = 0; i < CurrentWaypoints.Length; i++)
+            CurrentWaypoints[i] = waypointList[i].transform.position;
     }
 }

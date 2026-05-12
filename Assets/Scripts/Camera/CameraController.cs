@@ -25,8 +25,11 @@ public class CameraController : MonoBehaviour
     [SerializeField] private float maxPitch = 85f;
 
     [Header("Zoom details")]
+    [Tooltip("Multiplicador para rueda / pinch.")]
     [SerializeField] private float zoomSpeed = 10;
+    [Tooltip("Distancia mínima cámara ↔ punto de foco (world).")]
     [SerializeField] private float minZoom = 3;
+    [Tooltip("Distancia máxima cámara ↔ punto de foco (world).")]
     [SerializeField] private float maxZoom = 15;
 
 
@@ -48,14 +51,17 @@ public class CameraController : MonoBehaviour
         if (canControll == false)
             return;
 
+        RefreshFocusPoint();
+
         HandleRotation();
+        RefreshFocusPoint();
+
         HandleZoom();
         //HandleEdgeMovement();
         HandleMouseMovement();
         HandleMovement();
 
-        focusPoint.position = transform.position + (transform.forward * GetFocusPointDistance());
-
+        RefreshFocusPoint();
     }
 
     public void EnableCameraConrolls(bool enable) => canControll = enable;
@@ -64,35 +70,70 @@ public class CameraController : MonoBehaviour
     public float AdjustKeyboardSenseitivty(float value) => movementSpeed = value;
     public float AdjustMouseSensetivity(float value) => mouseMovementSpeed = value;
 
+    private void RefreshFocusPoint()
+    {
+        if (focusPoint == null)
+            return;
+
+        focusPoint.position = transform.position + (transform.forward * GetFocusPointDistance());
+    }
+
     private void HandleZoom()
     {
+        if (focusPoint == null)
+            return;
+
+        // Pinch con dos dedos (móvil).
         if (Input.touchCount == 2)
         {
             Touch t1 = Input.GetTouch(0);
             Touch t2 = Input.GetTouch(1);
 
-            float prevMag = (t1.position - t1.deltaPosition - (t2.position - t2.deltaPosition)).magnitude;
-            float currentMag = (t1.position - t2.position).magnitude;
+            Vector2 t1Prev = t1.position - t1.deltaPosition;
+            Vector2 t2Prev = t2.position - t2.deltaPosition;
+            float prevMag = Vector2.Distance(t1Prev, t2Prev);
+            float currentMag = Vector2.Distance(t1.position, t2.position);
             float difference = currentMag - prevMag;
 
-            Vector3 touchZoomDir = transform.forward * difference * (zoomSpeed * 0.05f);
-            Vector3 touchTargetPos = transform.position + touchZoomDir;
-
-            if (!(transform.position.y < minZoom && difference > 0) && !(transform.position.y > maxZoom && difference < 0))
-                transform.position = Vector3.SmoothDamp(transform.position, touchTargetPos, ref zoomVelocity, smoothTime);
-
+            float delta = difference * zoomSpeed * 0.05f;
+            TryApplyZoom(delta);
             return;
         }
 
+        // Rueda del mouse (PC) + respaldo con mouseScrollDelta.
         float scroll = Input.GetAxis("Mouse ScrollWheel");
-        Vector3 zoomDirection = transform.forward * scroll * zoomSpeed;
-        Vector3 targetPosition = transform.position + zoomDirection;
+        if (Mathf.Approximately(scroll, 0f))
+            scroll = Input.mouseScrollDelta.y * 0.08f;
 
-        if (transform.position.y < minZoom && scroll > 0)
+        if (Mathf.Approximately(scroll, 0f))
             return;
 
-        if (transform.position.y > maxZoom && scroll < 0)
+        TryApplyZoom(scroll * zoomSpeed);
+    }
+
+    /// <summary>Mueve la cámara a lo largo del eje de vista y limita por distancia al punto de foco.</summary>
+    private void TryApplyZoom(float deltaAlongForward)
+    {
+        if (focusPoint == null || Mathf.Abs(deltaAlongForward) < 1e-5f)
             return;
+
+        Vector3 fp = focusPoint.position;
+        Vector3 offset = transform.position - fp;
+        float dist = offset.magnitude;
+
+        if (dist < 0.01f)
+        {
+            offset = -transform.forward.normalized;
+            dist = minZoom;
+        }
+        else
+            offset /= dist;
+
+        float newDist = Mathf.Clamp(dist - deltaAlongForward, minZoom, maxZoom);
+        Vector3 targetPosition = fp + offset * newDist;
+
+        if (Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
+            targetPosition = levelCenterPoint + (targetPosition - levelCenterPoint).normalized * maxDistanceFromCenter;
 
         transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref zoomVelocity, smoothTime);
     }

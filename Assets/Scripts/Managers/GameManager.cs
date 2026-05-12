@@ -1,8 +1,7 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
+// Estado global del nivel: vidas (amenaza), oro, oleada activa y disparo de pantallas victoria / derrota vía UI_InGame.
 public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
@@ -48,6 +47,7 @@ public class GameManager : MonoBehaviour
 
     public bool IsTestingLevel() => levelManager == null;
 
+    /// <summary>Derrota: detiene oleadas, enfoque al castillo y muestra game over.</summary>
     public IEnumerator LevelFailedCo()
     {
         gameLost = true;
@@ -63,6 +63,7 @@ public class GameManager : MonoBehaviour
 
     public void LevelCompleted() => StartCoroutine(LevelCompletedCo());
 
+    /// <summary>Victoria de oleada/nivel: desbloquea siguiente nivel o pantalla final según LevelManager.</summary>
     private IEnumerator LevelCompletedCo()
     {
         if (cameraEffects != null)

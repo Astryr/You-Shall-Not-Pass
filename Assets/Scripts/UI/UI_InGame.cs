@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 
+// HUD en partida + paneles de victoria / derrota / nivel completado (GameManager los activa).
 public class UI_InGame : MonoBehaviour
 {
     private UI ui;
@@ -24,6 +25,9 @@ public class UI_InGame : MonoBehaviour
     [SerializeField] private GameObject gameOverUI;
     [SerializeField] private GameObject levelCompletedUI;
 
+    [Header("Tutorial")]
+    [SerializeField] private UI_Tutorial tutorialUI;
+
     private void Awake()
     {
         uiAnimator = GetComponentInParent<UI_Animator>();
@@ -42,20 +46,86 @@ public class UI_InGame : MonoBehaviour
 
     public void EnableGameOverUI(bool enable)
     {
-        if(gameOverUI != null)
-            gameOverUI.SetActive(enable);
+        if (enable)
+            PresentEndGameOverlay(gameOverUI);
+        else
+            RestoreGameplayAfterEndScreen();
     }
+
     public void EnableVictoryUI(bool enable)
     {
-        if(victoryUI != null)
-            victoryUI.SetActive(enable);
+        if (enable)
+            PresentEndGameOverlay(victoryUI);
+        else
+            RestoreGameplayAfterEndScreen();
     }
 
     public void EnableLevelCompletedUI(bool enable)
     {
-        if(levelCompletedUI != null) 
-            levelCompletedUI.SetActive(enable);
+        if (enable)
+            PresentEndGameOverlay(levelCompletedUI);
+        else
+            RestoreGameplayAfterEndScreen();
     }
+
+    /// <summary>Solo el overlay activo; resto del HUD de partida + torres + pausa ocultos.</summary>
+    private void PresentEndGameOverlay(GameObject overlay)
+    {
+        if (overlay == null)
+            return;
+
+        // Si el tutorial estaba abierto, cerrarlo sin pausa para que no bloquee el game over.
+        if (tutorialUI != null && tutorialUI.gameObject.activeSelf)
+        {
+            Time.timeScale = 1f;
+            tutorialUI.gameObject.SetActive(false);
+        }
+
+        ui.ApplyCanvasIsolationForEndGameScreen();
+
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            GameObject child = transform.GetChild(i).gameObject;
+            bool isOverlay = child == victoryUI || child == gameOverUI || child == levelCompletedUI
+                             || (tutorialUI != null && child == tutorialUI.gameObject);
+            if (!isOverlay)
+                child.SetActive(false);
+            else
+                child.SetActive(child == overlay);
+        }
+
+        ui.SetBuildAndPauseChromeVisible(false);
+    }
+
+    private void RestoreGameplayAfterEndScreen()
+    {
+        victoryUI?.SetActive(false);
+        gameOverUI?.SetActive(false);
+        levelCompletedUI?.SetActive(false);
+
+        ui.ClearCanvasIsolationForEndGameScreen();
+
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            GameObject child = transform.GetChild(i).gameObject;
+            bool isOverlay = child == victoryUI || child == gameOverUI || child == levelCompletedUI
+                             || (tutorialUI != null && child == tutorialUI.gameObject);
+            if (!isOverlay)
+                child.SetActive(true);
+        }
+
+        ui.SetBuildAndPauseChromeVisible(true);
+    }
+
+    /// <summary>Restaura HUD + oculta overlays (al cargar nivel o salir de pantalla de fin).</summary>
+    public void ResetToGameplayLayout()
+    {
+        RestoreGameplayAfterEndScreen();
+        tutorialUI?.ShowIfFirstTime();
+    }
+
+    /// <summary>Abre el tutorial manualmente (botón ? del HUD).</summary>
+    public void OpenTutorial() => tutorialUI?.Show();
 
     
 

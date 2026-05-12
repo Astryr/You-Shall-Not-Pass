@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,6 +18,8 @@ public class UI : MonoBehaviour
     [Header("UI SFX")]
     public AudioSource onHoverSfx;
     public AudioSource onClickSfx;
+
+    private List<(GameObject go, bool wasActive)> _canvasRootsHiddenForEndGame;
 
     private void Awake()
     {
@@ -75,12 +78,64 @@ public class UI : MonoBehaviour
     public void EnableInGameUI(bool enable)
     {
         if(enable)
+        {
+            ClearCanvasIsolationForEndGameScreen();
             SwitchTo(inGameUI.gameObject);
+            inGameUI.ResetToGameplayLayout();
+        }
         else
         {
             inGameUI.SnapTimerToDefaultPosition();
             SwitchTo(null);
         }
+    }
+
+    /// <summary>Torres + panel de pausa (Canvas). Se oculta en game over / victoria para dejar solo el overlay.</summary>
+    public void SetBuildAndPauseChromeVisible(bool visible)
+    {
+        if (buildButtonsUI != null)
+            buildButtonsUI.gameObject.SetActive(visible);
+
+        UI_Pause pause = GetComponentInChildren<UI_Pause>(true);
+        if (pause != null)
+        {
+            if (!visible)
+                pause.gameObject.SetActive(false);
+        }
+    }
+
+    /// <summary>Oculta otros hijos del Canvas (fade, menús residuales, SFX se mantiene para sonidos del overlay).</summary>
+    public void ApplyCanvasIsolationForEndGameScreen()
+    {
+        if (_canvasRootsHiddenForEndGame != null)
+            return;
+
+        _canvasRootsHiddenForEndGame = new List<(GameObject, bool)>();
+        for (int i = 0; i < transform.childCount; i++)
+        {
+            GameObject ch = transform.GetChild(i).gameObject;
+            if (ch == inGameUI.gameObject)
+                continue;
+            if (ch.name == "UI_SFX")
+                continue;
+
+            _canvasRootsHiddenForEndGame.Add((ch, ch.activeSelf));
+            ch.SetActive(false);
+        }
+    }
+
+    public void ClearCanvasIsolationForEndGameScreen()
+    {
+        if (_canvasRootsHiddenForEndGame == null)
+            return;
+
+        foreach (var entry in _canvasRootsHiddenForEndGame)
+        {
+            if (entry.go != null)
+                entry.go.SetActive(entry.wasActive);
+        }
+
+        _canvasRootsHiddenForEndGame = null;
     }
 
     public void QuitButton()

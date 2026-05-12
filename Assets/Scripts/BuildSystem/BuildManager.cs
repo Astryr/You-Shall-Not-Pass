@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-// Final tower build step is done on UI_BuildButton
+// Mecánica principal de construcción: elige casilla (BuildSlot), confirma torre desde UI (UI_BuildButton) y esta clase instancia la torre si hay oro.
 public class BuildManager : MonoBehaviour
 {
     private UI ui;
@@ -56,6 +56,7 @@ public class BuildManager : MonoBehaviour
         bool hasInput = false;
         Vector3 inputPosition = Vector3.zero;
 
+        // Toque (móvil) o clic: ignorar si el puntero está sobre UI de Unity; los botones de torre también marcan isMouseOverUI.
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -81,6 +82,13 @@ public class BuildManager : MonoBehaviour
 
         if (hasInput)
         {
+            if (isMouseOverUI)
+                return;
+
+            if (Camera.main == null)
+                return;
+
+            // Clic fuera de una casilla de construcción cancela la selección / preview.
             if (Physics.Raycast(Camera.main.ScreenPointToRay(inputPosition), out RaycastHit hit, Mathf.Infinity, ~whatToIgnore))
             {
                 bool clickedNotOnBuildSlot = hit.collider.GetComponent<BuildSlot>() == null;
@@ -100,8 +108,15 @@ public class BuildManager : MonoBehaviour
     {
         MakeBuildSlotNotAvalibleIfNeeded(newWaveManager, currentGrid);
     }
+    /// <summary>Confirma la torre en la casilla seleccionada: valida oro, gasta moneda, shake de cámara e Instantiate.</summary>
     public void BuildTower(GameObject towerToBuild,int towerPrice,Transform newPreviewTower)
     {
+        if (gameManager == null || ui == null || ui.inGameUI == null)
+        {
+            Debug.LogWarning("BuildManager: GameManager o UI no inicializados.");
+            return;
+        }
+
         if (gameManager.HasEnoughCurrency(towerPrice) == false)
         {
             ui.inGameUI.ShakeCurrencyUI();
@@ -123,12 +138,12 @@ public class BuildManager : MonoBehaviour
         BuildSlot slotToUse = GetSelectedSlot();
         CancelBuildAction();
 
-        slotToUse.SnapToDefaultPositionImmidiatly();
+        slotToUse.SnapToDefaultPositionImmediately();
         slotToUse.SetSlotAvalibleTo(false);
 
         ui.buildButtonsUI.SetLastSelected(null,null);
 
-        cameraEffects.Screenshake(camShakeDuration, camShakeMagnitude);
+        cameraEffects?.Screenshake(camShakeDuration, camShakeMagnitude);
 
         GameObject newTower = Instantiate(towerToBuild, slotToUse.GetBuildPosition(towerCenterY), Quaternion.identity);
         newTower.transform.rotation = newPreviewTower.rotation;

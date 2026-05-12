@@ -1,14 +1,14 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 
-public enum EnemyType { Basic, Fast, Heavy, Swarm,Stealth,Flying, BossSpider, None}
+// Tipos de enemigo usados por oleadas / portal (Basic es el más simple para la muestra).
+public enum EnemyType { Basic, Fast, Heavy, Swarm, Stealth, Flying, BossSpider, None }
 
-public class Enemy : MonoBehaviour , IDamagable
+// Comportamiento base: recorre waypoints del portal con NavMeshAgent, recibe daño y vuelve al pool al morir.
+public class Enemy : MonoBehaviour, IDamagable
 {
-
-    public Enemy_Visuals visuals {  get; private set; }
+    public Enemy_Visuals visuals { get; private set; }
 
     protected ObjectPoolManager objectPool;
     protected NavMeshAgent agent;
@@ -41,6 +41,7 @@ public class Enemy : MonoBehaviour , IDamagable
     {
         rb = GetComponent<Rigidbody>();
         agent = GetComponent<NavMeshAgent>();
+        // Rotación manual (FaceTarget); el agente solo calcula path y velocidad.
         agent.updateRotation = false;
         agent.avoidancePriority = Mathf.RoundToInt(agent.speed * 10);
 
@@ -59,11 +60,12 @@ public class Enemy : MonoBehaviour , IDamagable
     }
 
 
+    /// <summary>Llama el portal al sacar el enemigo del pool: copia ruta, resetea stats y arranca movimiento.</summary>
     public void SetupEnemy(EnemyPortal myNewPortal)
     {
         myPortal = myNewPortal;
 
-        UpdateWaypoints(myPortal.currentWaypints);
+        UpdateWaypoints(myPortal.CurrentWaypoints);
         CollectTotalDistance();
         ResetEnemy();
         BeginMovement();
@@ -95,6 +97,7 @@ public class Enemy : MonoBehaviour , IDamagable
 
         agent.speed = originalSpeed;
 
+        // Alinear al NavMesh (reuso desde pool puede dejar el transform fuera de malla).
         UnityEngine.AI.NavMeshHit hit;
         bool positionFound = UnityEngine.AI.NavMesh.SamplePosition(transform.position, out hit, 50.0f, UnityEngine.AI.NavMesh.AllAreas);
 
@@ -185,18 +188,21 @@ public class Enemy : MonoBehaviour , IDamagable
         Vector3 nextWaypoint = myWaypoints[nextWaypointIndex];
 
         float distanceToNextWaypoint = Vector3.Distance(transform.position, nextWaypoint);
-        float distnaceBeetwenPoints = Vector3.Distance(currentWaypoint, nextWaypoint);
+        float distanceBetweenPoints = Vector3.Distance(currentWaypoint, nextWaypoint);
 
-        
-        return distnaceBeetwenPoints > distanceToNextWaypoint;
+        return distanceBetweenPoints > distanceToNextWaypoint;
     }
+
     public virtual float DistanceToFinishLine() => totalDistance + agent.remainingDistance;
+
+    // Suma tramos spawn → meta (debe reiniciarse en cada Setup por object pooling).
     private void CollectTotalDistance()
     {
+        totalDistance = 0f;
         for (int i = 0; i < myWaypoints.Length - 1; i++)
         {
             float distance = Vector3.Distance(myWaypoints[i], myWaypoints[i + 1]);
-            totalDistance = totalDistance + distance;
+            totalDistance += distance;
         }
     }
     private void FaceTarget(Vector3 newTarget)
@@ -220,6 +226,7 @@ public class Enemy : MonoBehaviour , IDamagable
         return myWaypoints[myWaypoints.Length - 1];
     }
 
+    // Avanza al siguiente punto de la ruta y actualiza totalDistance (usado p. ej. para priorizar torres).
     private Vector3 GetNextWaypoint()
     {
         if (nextWaypointIndex >= myWaypoints.Length)
@@ -232,7 +239,7 @@ public class Enemy : MonoBehaviour , IDamagable
         if (nextWaypointIndex > 0)
         {
             float distance = Vector3.Distance(myWaypoints[nextWaypointIndex], myWaypoints[nextWaypointIndex - 1]);
-            totalDistance = totalDistance - distance;
+            totalDistance -= distance;
         }
 
         nextWaypointIndex = nextWaypointIndex + 1;
@@ -241,7 +248,7 @@ public class Enemy : MonoBehaviour , IDamagable
         return targetPoint;
     }
 
-    public Vector3 CenterPoint() => centerPoint.position;
+    public Vector3 CenterPoint() => centerPoint != null ? centerPoint.position : transform.position;
     public EnemyType GetEnemyType() => enemyType;
     
     public virtual void TakeDamage(float damage)
@@ -257,7 +264,7 @@ public class Enemy : MonoBehaviour , IDamagable
 
     public virtual void Die()
     {
-        gameManager.UpdateCurrency(1);
+        gameManager?.UpdateCurrency(1);
         RemoveEnemy();
     }
 

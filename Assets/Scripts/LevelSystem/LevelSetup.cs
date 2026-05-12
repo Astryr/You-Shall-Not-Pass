@@ -42,6 +42,9 @@ public class LevelSetup : MonoBehaviour
 
             gameManager = FindFirstObjectByType<GameManager>();
             gameManager.PrepareLevel(levelCurrency,myWaveManager);
+
+            // La transición desde menú puede dejar controles apagados hasta que termina el tween; al estar el nivel listo, activar zoom/pan.
+            FindFirstObjectByType<CameraController>()?.EnableCameraConrolls(true);
         }
 
         UnlockAvalibleTowers();

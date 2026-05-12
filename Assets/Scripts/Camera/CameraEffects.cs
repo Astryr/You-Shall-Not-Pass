@@ -5,6 +5,7 @@ public class CameraEffects : MonoBehaviour
 {
     private CameraController camController;
     private Coroutine cameraCo;
+    private Coroutine enableControlsCo;
 
     [Header("Transition details")]
     [SerializeField] private float transitionDuration = 3;
@@ -78,15 +79,18 @@ public class CameraEffects : MonoBehaviour
         if(cameraCo != null)
             StopCoroutine(cameraCo);
 
+        CancelScheduledEnableControls();
         cameraCo = StartCoroutine(ChangePositionAndRotation(targetPosition, targetRotation,focusOnCastleDuration));
-        StartCoroutine(EnableCameraControllsAfter(focusOnCastleDuration + .1f));
+        ScheduleEnableCameraControlsAfter(focusOnCastleDuration + .1f);
     }
 
     public void SwitchToMenuView()
     {
+        CancelScheduledEnableControls();
         if (cameraCo != null)
             StopCoroutine(cameraCo);
 
+        camController.EnableCameraConrolls(false);
         cameraCo = StartCoroutine(ChangePositionAndRotation(inMenuPosition, inMenuRotation, transitionDuration));
         camController.AdjustPitchValue(inMenuRotation.eulerAngles.x);
     }
@@ -99,14 +103,16 @@ public class CameraEffects : MonoBehaviour
         cameraCo = StartCoroutine(ChangePositionAndRotation(inGamePosition, inGameRotation,transitionDuration));
         camController.AdjustPitchValue(inGameRotation.eulerAngles.x);
 
-        StartCoroutine(EnableCameraControllsAfter(transitionDuration + .1f));
+        ScheduleEnableCameraControlsAfter(transitionDuration + .1f);
     }
 
     public void SwitchToLevelSelectView()
     {
+        CancelScheduledEnableControls();
         if (cameraCo != null)
             StopCoroutine(cameraCo);
 
+        camController.EnableCameraConrolls(false);
         cameraCo = StartCoroutine(ChangePositionAndRotation(levelSelectPosition, levelSelectRotation,transitionDuration));
         camController.AdjustPitchValue(levelSelectRotation.eulerAngles.x);
     }
@@ -134,9 +140,25 @@ public class CameraEffects : MonoBehaviour
         transform.rotation = targetRotation;
     }
 
+    private void CancelScheduledEnableControls()
+    {
+        if (enableControlsCo == null)
+            return;
+
+        StopCoroutine(enableControlsCo);
+        enableControlsCo = null;
+    }
+
+    private void ScheduleEnableCameraControlsAfter(float delay)
+    {
+        CancelScheduledEnableControls();
+        enableControlsCo = StartCoroutine(EnableCameraControllsAfter(delay));
+    }
+
     private IEnumerator EnableCameraControllsAfter(float delay)
     {
         yield return new WaitForSeconds(delay);
+        enableControlsCo = null;
         camController.EnableCameraConrolls(true);
     }
 

@@ -104,7 +104,7 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     {
         moveToDefaultCo = StartCoroutine(tileAnim.MoveTileCo(transform, defaultPosition));
     }
-    public void SnapToDefaultPositionImmidiatly()
+    public void SnapToDefaultPositionImmediately()
     {
         if(moveToDefaultCo != null)
             StopCoroutine(moveToDefaultCo);
