@@ -3744,6 +3744,7 @@ MonoBehaviour:
   victoryUI: {fileID: 2449007683693861019}
   gameOverUI: {fileID: 9110059693977522488}
   levelCompletedUI: {fileID: 2914938837188750461}
+  tutorialUI: {fileID: 0}
 --- !u!1 &2230699536706998370
 GameObject:
   m_ObjectHideFlags: 0

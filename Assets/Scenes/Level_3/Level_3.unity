@@ -93,7 +93,8 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 0}
+  m_LightingDataAsset: {fileID: 112000000, guid: cae13267b9c60864184ecbce379f2d67,
+    type: 2}
   m_LightingSettings: {fileID: 0}
 --- !u!196 &4
 NavMeshSettings:
@@ -10415,7 +10416,7 @@ MonoBehaviour:
   buildPreviewMat: {fileID: 2100000, guid: a4a1ee1c3aecade42895b1fb329bee59, type: 2}
   towerCenterY: 0.5
   camShakeDuration: 0.15
-  camShakeMagnutiude: 0.02
+  camShakeMagnitude: 0.02
 --- !u!4 &1276405986
 Transform:
   m_ObjectHideFlags: 0

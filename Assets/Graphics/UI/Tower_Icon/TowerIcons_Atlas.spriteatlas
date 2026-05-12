@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!687078895 &4343727234628468602
+SpriteAtlas:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: TowerIcons_Atlas
+  m_EditorData:
+    serializedVersion: 2
+    textureSettings:
+      serializedVersion: 2
+      anisoLevel: 0
+      compressionQuality: 0
+      maxTextureSize: 0
+      textureCompression: 0
+      filterMode: 1
+      generateMipMaps: 0
+      readable: 0
+      crunchedCompression: 0
+      sRGB: 1
+    platformSettings:
+    - serializedVersion: 4
+      m_BuildTarget: Android
+      m_MaxTextureSize: 1024
+      m_ResizeAlgorithm: 0
+      m_TextureFormat: 47
+      m_TextureCompression: 1
+      m_CompressionQuality: 50
+      m_CrunchedCompression: 0
+      m_AllowsAlphaSplitting: 0
+      m_Overridden: 1
+      m_IgnorePlatformSupport: 0
+      m_AndroidETC2FallbackOverride: 0
+      m_ForceMaximumCompressionQuality_BC6H_BC7: 0
+    packingSettings:
+      serializedVersion: 2
+      padding: 4
+      blockOffset: 1
+      allowAlphaSplitting: 0
+      enableRotation: 0
+      enableTightPacking: 0
+      enableAlphaDilation: 0
+    secondaryTextureSettings: {}
+    variantMultiplier: 1
+    packables:
+    - {fileID: 102900000, guid: f03bfc40d1a2dfc45ac615ffcf13cd6b, type: 3}
+    bindAsDefault: 1
+    isAtlasV2: 0
+    cachedData: {fileID: 0}
+    packedSpriteRenderDataKeys:
+    - ff61fc26e078a364db7f5cf9876215e9: 857461376
+    - bca0deca90e1be541bb2d05bc14b3bf7: 808930612
+    - a978c7eb8d456f242966d858cc75d59e: -401230488
+    - 0c81a67cbd720304b9d040ba30bf688e: 169482167
+    - b2c2114df6d883d4896addfcf885dc72: -175881985
+    - b2c2114df6d883d4896addfcf885dc72: 130210641
+    - 05e63c4eacaadc14d97e84a334184917: 488387213
+    - bec9f96e1ad24b44eaa76478fa455217: -76150514
+  m_MasterAtlas: {fileID: 0}
+  m_PackedSprites:
+  - {fileID: 857461376, guid: ff61fc26e078a364db7f5cf9876215e9, type: 3}
+  - {fileID: 808930612, guid: bca0deca90e1be541bb2d05bc14b3bf7, type: 3}
+  - {fileID: -401230488, guid: a978c7eb8d456f242966d858cc75d59e, type: 3}
+  - {fileID: 169482167, guid: 0c81a67cbd720304b9d040ba30bf688e, type: 3}
+  - {fileID: -175881985, guid: b2c2114df6d883d4896addfcf885dc72, type: 3}
+  - {fileID: 130210641, guid: b2c2114df6d883d4896addfcf885dc72, type: 3}
+  - {fileID: 488387213, guid: 05e63c4eacaadc14d97e84a334184917, type: 3}
+  - {fileID: -76150514, guid: bec9f96e1ad24b44eaa76478fa455217, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - 7_0
+  - 6_0
+  - 2_0
+  - 1_0
+  - 3_1
+  - 3_0
+  - 4_0
+  - 5_0
+  m_RenderDataMap: {}
+  m_Tag: TowerIcons_Atlas
+  m_IsVariant: 0
