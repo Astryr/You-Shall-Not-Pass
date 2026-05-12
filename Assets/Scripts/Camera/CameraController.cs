@@ -40,10 +40,16 @@ public class CameraController : MonoBehaviour
     private Vector3 zoomVelocity = Vector3.zero;
     private Vector3 lastMousePosition;
 
+    // Distancia objetivo cámara↔punto de foco; se actualiza con scroll/pinch y se aplica cada frame.
+    private float targetZoomDist = -1f;
+
     private void Start()
     {
         screenWidth = Screen.width;
         screenHeight = Screen.height;
+        targetZoomDist = Mathf.Clamp(
+            Vector3.Distance(transform.position, GetVirtualFocusPoint()),
+            minZoom, maxZoom);
     }
 
     void Update()
@@ -57,6 +63,7 @@ public class CameraController : MonoBehaviour
         RefreshFocusPoint();
 
         HandleZoom();
+        ApplyZoom();          // se llama CADA frame para suavizar aunque no haya input
         //HandleEdgeMovement();
         HandleMouseMovement();
         HandleMovement();
@@ -76,8 +83,11 @@ public class CameraController : MonoBehaviour
             focusPoint.position = transform.position + (transform.forward * GetFocusPointDistance());
     }
 
+    // Solo lee el input y actualiza targetZoomDist; no mueve la cámara directamente.
     private void HandleZoom()
     {
+        float delta = 0f;
+
         // Pinch con dos dedos (móvil).
         if (Input.touchCount == 2)
         {
@@ -87,23 +97,50 @@ public class CameraController : MonoBehaviour
             Vector2 t1Prev = t1.position - t1.deltaPosition;
             Vector2 t2Prev = t2.position - t2.deltaPosition;
             float prevMag = Vector2.Distance(t1Prev, t2Prev);
-            float currentMag = Vector2.Distance(t1.position, t2.position);
-            float difference = currentMag - prevMag;
+            float curMag  = Vector2.Distance(t1.position, t2.position);
 
-            float delta = difference * zoomSpeed * 0.05f;
-            TryApplyZoom(delta);
-            return;
+            // Pellizcar = alejar dedos = zoom in → delta positivo reduce distancia
+            delta = (prevMag - curMag) * zoomSpeed * 0.01f;
+        }
+        else
+        {
+            // Rueda del mouse (PC); scroll hacia adelante = zoom in = delta negativo en distancia.
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (Mathf.Approximately(scroll, 0f))
+                scroll = Input.mouseScrollDelta.y * 0.08f;
+
+            delta = -scroll * zoomSpeed;
         }
 
-        // Rueda del mouse (PC) + respaldo con mouseScrollDelta.
-        float scroll = Input.GetAxis("Mouse ScrollWheel");
-        if (Mathf.Approximately(scroll, 0f))
-            scroll = Input.mouseScrollDelta.y * 0.08f;
-
-        if (Mathf.Approximately(scroll, 0f))
+        if (Mathf.Abs(delta) < 1e-5f)
             return;
 
-        TryApplyZoom(scroll * zoomSpeed);
+        targetZoomDist = Mathf.Clamp(targetZoomDist + delta, minZoom, maxZoom);
+    }
+
+    // Mueve la cámara suavemente hacia la distancia de zoom objetivo; se llama cada frame.
+    private void ApplyZoom()
+    {
+        Vector3 fp = GetVirtualFocusPoint();
+        Vector3 dir = transform.position - fp;
+
+        if (dir.sqrMagnitude < 0.0001f)
+            dir = -transform.forward;
+
+        dir.Normalize();
+
+        Vector3 targetPos = fp + dir * targetZoomDist;
+
+        // Solo aplica límite de distancia al centro si el valor fue configurado en Inspector.
+        if (maxDistanceFromCenter > 0.01f &&
+            Vector3.Distance(levelCenterPoint, targetPos) > maxDistanceFromCenter)
+        {
+            targetPos = levelCenterPoint +
+                        (targetPos - levelCenterPoint).normalized * maxDistanceFromCenter;
+        }
+
+        transform.position = Vector3.SmoothDamp(
+            transform.position, targetPos, ref zoomVelocity, smoothTime);
     }
 
     // Devuelve el punto de foco asignado, o uno calculado con raycast si no hay Transform asignado.
@@ -112,37 +149,11 @@ public class CameraController : MonoBehaviour
         if (focusPoint != null)
             return focusPoint.position;
 
-        if (Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, maxFocusPointDistance))
+        if (Physics.Raycast(transform.position, transform.forward,
+                            out RaycastHit hit, maxFocusPointDistance))
             return hit.point;
 
         return transform.position + transform.forward * (maxFocusPointDistance * 0.5f);
-    }
-
-    /// <summary>Mueve la cámara a lo largo del eje de vista y limita por distancia al punto de foco.</summary>
-    private void TryApplyZoom(float deltaAlongForward)
-    {
-        if (Mathf.Abs(deltaAlongForward) < 1e-5f)
-            return;
-
-        Vector3 fp = GetVirtualFocusPoint();
-        Vector3 offset = transform.position - fp;
-        float dist = offset.magnitude;
-
-        if (dist < 0.01f)
-        {
-            offset = -transform.forward.normalized;
-            dist = minZoom;
-        }
-        else
-            offset /= dist;
-
-        float newDist = Mathf.Clamp(dist - deltaAlongForward, minZoom, maxZoom);
-        Vector3 targetPosition = fp + offset * newDist;
-
-        if (Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
-            targetPosition = levelCenterPoint + (targetPosition - levelCenterPoint).normalized * maxDistanceFromCenter;
-
-        transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref zoomVelocity, smoothTime);
     }
 
     private float GetFocusPointDistance()
