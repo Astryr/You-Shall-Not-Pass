@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 // Panel "Cómo Jugar" que vive dentro de MainMenu_UI.
 // El botón HowToPlay_BTN llama a Show(); el botón Volver llama a Hide().
@@ -41,6 +42,11 @@ public class UI_HowToPlay : MonoBehaviour
     /// <summary>Llamado por el botón "Volver" dentro del panel.</summary>
     public void Hide()
     {
+        // Limpia el objeto seleccionado antes de desactivar para evitar que el
+        // EventSystem quede bloqueado apuntando a un GameObject inactivo.
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
+
         gameObject.SetActive(false);
     }
 

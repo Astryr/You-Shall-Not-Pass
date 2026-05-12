@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 // Overlay de instrucciones que aparece automaticamente la primera vez que el jugador entra a un nivel.
@@ -51,6 +52,8 @@ public class UI_Tutorial : MonoBehaviour
     {
         PlayerPrefs.SetInt(TutorialShownKey, 1);
         Time.timeScale = 1f;
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
         gameObject.SetActive(false);
     }
 
