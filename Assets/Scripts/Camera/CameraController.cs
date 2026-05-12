@@ -1,5 +1,9 @@
 using UnityEngine;
 
+// Control de cámara para PC y móvil:
+//   PC     → teclado (pan), botón derecho (rotación), rueda (zoom), botón central (pan libre).
+//   Móvil  → 1 dedo (pan), 2 dedos (pinch = zoom).
+// Los controles se habilitan/deshabilitan desde CameraEffects según la fase del juego.
 public class CameraController : MonoBehaviour
 {
     [SerializeField] private bool canControll;
@@ -216,6 +220,7 @@ public class CameraController : MonoBehaviour
 
     private bool isTouchDraggingUI = false;
 
+    // Pan con 1 dedo (móvil) o botón central del mouse (PC). Ignora el gesto si empezó sobre UI.
     private void HandleMouseMovement()
     { 
         if (Input.touchCount == 1)
