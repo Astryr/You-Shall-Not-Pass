@@ -72,17 +72,12 @@ public class CameraController : MonoBehaviour
 
     private void RefreshFocusPoint()
     {
-        if (focusPoint == null)
-            return;
-
-        focusPoint.position = transform.position + (transform.forward * GetFocusPointDistance());
+        if (focusPoint != null)
+            focusPoint.position = transform.position + (transform.forward * GetFocusPointDistance());
     }
 
     private void HandleZoom()
     {
-        if (focusPoint == null)
-            return;
-
         // Pinch con dos dedos (móvil).
         if (Input.touchCount == 2)
         {
@@ -111,13 +106,25 @@ public class CameraController : MonoBehaviour
         TryApplyZoom(scroll * zoomSpeed);
     }
 
+    // Devuelve el punto de foco asignado, o uno calculado con raycast si no hay Transform asignado.
+    private Vector3 GetVirtualFocusPoint()
+    {
+        if (focusPoint != null)
+            return focusPoint.position;
+
+        if (Physics.Raycast(transform.position, transform.forward, out RaycastHit hit, maxFocusPointDistance))
+            return hit.point;
+
+        return transform.position + transform.forward * (maxFocusPointDistance * 0.5f);
+    }
+
     /// <summary>Mueve la cámara a lo largo del eje de vista y limita por distancia al punto de foco.</summary>
     private void TryApplyZoom(float deltaAlongForward)
     {
-        if (focusPoint == null || Mathf.Abs(deltaAlongForward) < 1e-5f)
+        if (Mathf.Abs(deltaAlongForward) < 1e-5f)
             return;
 
-        Vector3 fp = focusPoint.position;
+        Vector3 fp = GetVirtualFocusPoint();
         Vector3 offset = transform.position - fp;
         float dist = offset.magnitude;
 
@@ -148,17 +155,17 @@ public class CameraController : MonoBehaviour
 
     private void HandleRotation()
     {
-        if (Input.GetMouseButton(1)) // Right mouse button for rotation
+        if (Input.GetMouseButton(1))
         {
             float horizontalRotation = Input.GetAxis("Mouse X") * rotationSpeed * Time.deltaTime;
             float verticalRotation = Input.GetAxis("Mouse Y") * rotationSpeed * Time.deltaTime;
 
             pitch = Mathf.Clamp(pitch - verticalRotation, minPitch, maxPitch);
 
-            transform.RotateAround(focusPoint.position, Vector3.up, horizontalRotation);
-            transform.RotateAround(focusPoint.position, transform.right, pitch - transform.eulerAngles.x);
-
-            transform.LookAt(focusPoint);
+            Vector3 pivot = GetVirtualFocusPoint();
+            transform.RotateAround(pivot, Vector3.up, horizontalRotation);
+            transform.RotateAround(pivot, transform.right, pitch - transform.eulerAngles.x);
+            transform.LookAt(pivot);
         }
     }
 

@@ -32,14 +32,18 @@ public class UI_Tutorial : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    /// <summary>Llama esto al iniciar el nivel; muestra el tutorial solo si nunca se vio.</summary>
+    /// <summary>Al iniciar el nivel muestra el tutorial si es la primera vez, SIN pausar el juego.</summary>
     public void ShowIfFirstTime()
     {
         if (!PlayerPrefs.HasKey(TutorialShownKey))
-            Show();
+        {
+            PopulateTexts();
+            gameObject.SetActive(true);
+            // No se pausa: el juego corre en segundo plano mientras el jugador lee.
+        }
     }
 
-    /// <summary>Fuerza apertura (botón ? del HUD).</summary>
+    /// <summary>Apertura manual (botón ? del HUD): pausa el juego mientras se lee.</summary>
     public void Show()
     {
         PopulateTexts();

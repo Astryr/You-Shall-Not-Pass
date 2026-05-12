@@ -85,6 +85,8 @@ public class UI : MonoBehaviour
         }
         else
         {
+            // Garantiza que el tiempo no quede congelado si el tutorial o pausa estaban activos.
+            Time.timeScale = 1f;
             inGameUI.SnapTimerToDefaultPosition();
             SwitchTo(null);
         }
