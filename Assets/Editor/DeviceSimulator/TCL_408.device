@@ -1,0 +1,39 @@
+{
+    "friendlyName": "TCL 408",
+    "version": 1,
+    "screens": [
+        {
+            "width": 720,
+            "height": 1600,
+            "navigationBarHeight": 0,
+            "dpi": 269,
+            "orientations": [
+                {
+                    "orientation": 1,
+                    "safeArea": { "serializedVersion": "2", "x": 0, "y": 80, "width": 720, "height": 1520 },
+                    "cutouts": [ { "serializedVersion": "2", "x": 310, "y": 0, "width": 100, "height": 80 } ]
+                },
+                {
+                    "orientation": 3,
+                    "safeArea": { "serializedVersion": "2", "x": 80, "y": 0, "width": 1520, "height": 720 },
+                    "cutouts": [ { "serializedVersion": "2", "x": 0, "y": 310, "width": 80, "height": 100 } ]
+                },
+                {
+                    "orientation": 4,
+                    "safeArea": { "serializedVersion": "2", "x": 0, "y": 0, "width": 1520, "height": 720 },
+                    "cutouts": [ { "serializedVersion": "2", "x": 1520, "y": 310, "width": 80, "height": 100 } ]
+                }
+            ]
+        }
+    ],
+    "systemInfo": {
+        "deviceModel": "TCL 408 (T507A)",
+        "deviceType": 1,
+        "operatingSystem": "Android 12",
+        "operatingSystemFamily": 0,
+        "processorCount": 8,
+        "processorFrequency": 2000,
+        "processorType": "MediaTek Helio G25",
+        "systemMemorySize": 4096
+    }
+}
