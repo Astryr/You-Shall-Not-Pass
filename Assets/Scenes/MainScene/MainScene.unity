@@ -996,8 +996,6 @@ MonoBehaviour:
   maxDistanceFromCenter: 30
   movementSpeed: 120
   mouseMovementSpeed: 5
-  edgeMovementSpeed: 50
-  edgeTreshold: 10
   focusPoint: {fileID: 195552685}
   maxFocusPointDistance: 15
   rotationSpeed: 200
@@ -6872,7 +6870,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_MatchWidthOrHeight
-      value: 0.7
+      value: 0.5
       objectReference: {fileID: 0}
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
@@ -6882,7 +6880,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_ReferenceResolution.y
-      value: 1612
+      value: 1600
       objectReference: {fileID: 0}
     - target: {fileID: 8359895088375685056, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
