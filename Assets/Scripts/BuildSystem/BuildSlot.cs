@@ -45,9 +45,8 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         if (buildManager.GetSelectedSlot() == this)
         {
             // On mobile, tap the same slot repeatedly to rotate the preview tower
-            UI uiScript = FindFirstObjectByType<UI>();
-            if (uiScript != null && uiScript.buildButtonsUI != null)
-                uiScript.buildButtonsUI.RotatePreview(90);
+            if (ui != null && ui.buildButtonsUI != null)
+                ui.buildButtonsUI.RotatePreview(90);
             return;
         }
 

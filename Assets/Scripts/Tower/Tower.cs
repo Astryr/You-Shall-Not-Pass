@@ -107,6 +107,10 @@ public class Tower : MonoBehaviour
     
     protected void AttemptToAttack()
     {
+        // El enemigo puede morir entre CanAttack() y este punto (FixedUpdate vs pool).
+        if (currentEnemy == null)
+            return;
+
         if (currentEnemy.gameObject.activeSelf == false)
         {
             currentEnemy = null;

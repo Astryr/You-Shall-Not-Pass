@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class Enemy_Heavy : Enemy
@@ -18,7 +17,7 @@ public class Enemy_Heavy : Enemy
     }
     private void EnableShieldIfNeeded()
     {
-        if (shieldObject != null & currentShield > 0)
+        if (shieldObject != null && currentShield > 0)
             shieldObject.gameObject.SetActive(true);
     }
 

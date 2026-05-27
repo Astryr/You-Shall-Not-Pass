@@ -46,6 +46,9 @@ public class CameraEffects : MonoBehaviour
         SwitchToMenuView();
     }
 
+    private Coroutine shakeCo;
+
+#if UNITY_EDITOR
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.V))
@@ -54,21 +57,24 @@ public class CameraEffects : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.B))
             FocusOnCastle();
     }
+#endif
 
     public void Screenshake(float newDuration, float newMagnitude)
     {
-        StartCoroutine(ScreenshakeFX(newDuration, newMagnitude));
+        if (shakeCo != null)
+            StopCoroutine(shakeCo);
+        shakeCo = StartCoroutine(ScreenshakeFX(newDuration, newMagnitude));
     }
 
     public void FocusOnCastle()
     {
-        Transform castle = FindFirstObjectByType<Castle>().transform;
-
-        if (castle == null)
+        Castle castleObj = FindFirstObjectByType<Castle>();
+        if (castleObj == null)
         {
             Debug.Log("There is no castle to focus on!");
             return;
         }
+        Transform castle = castleObj.transform;
 
         Vector3 directionToCastle = (castle.position - transform.position).normalized;
         Vector3 targetPosition = castle.position - (directionToCastle * distanceToCastle);

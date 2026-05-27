@@ -21,6 +21,7 @@ public class LevelManager : MonoBehaviour
         ui = FindFirstObjectByType<UI>();
     }
 
+#if UNITY_EDITOR
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.J))
@@ -29,9 +30,10 @@ public class LevelManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.K))
             LoadMainMenu();
 
-        if(Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R))
             RestartCurrentLevel();
     }
+#endif
 
     public void RestartCurrentLevel() => StartCoroutine(LoadLevelCo(currentLevelName));
     public void LoadLevel(string levelName) => StartCoroutine(LoadLevelCo(levelName));

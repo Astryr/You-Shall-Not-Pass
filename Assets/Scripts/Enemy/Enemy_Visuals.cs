@@ -21,6 +21,9 @@ public class Enemy_Visuals : MonoBehaviour
     protected virtual void Awake()
     {
         CollectDefaultMaterials();
+        // Escalonar el offset por instancia para que los enemigos no raycaseen todos en el mismo frame.
+        frameOffset = GetInstanceID() % 3;
+        if (frameOffset < 0) frameOffset += 3;
     }
 
     protected virtual void Start()
@@ -28,9 +31,13 @@ public class Enemy_Visuals : MonoBehaviour
         objectPool = ObjectPoolManager.instance;
     }
 
+    private int frameOffset;
+
     protected virtual void Update()
     {
-        AlignWithSlope();
+        // Raycast cada 3 frames en lugar de cada frame; reduce la carga de física en móvil.
+        if (Time.frameCount % 3 == frameOffset)
+            AlignWithSlope();
     }
 
     public void CreateOnDeathVFX()

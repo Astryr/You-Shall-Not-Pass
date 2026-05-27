@@ -1,7 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Rendering;
+using UnityEngine.EventSystems;
 
 public class LevelSetup : MonoBehaviour
 {
@@ -27,6 +27,13 @@ public class LevelSetup : MonoBehaviour
 
     private IEnumerator Start()
     {
+        // Las escenas de nivel se cargan de forma aditiva junto a MainScene, que ya tiene su propio
+        // EventSystem. Desactivar el duplicado evita el warning "There can be only one active EventSystem".
+        EventSystem localEventSystem = GetComponentInChildren<EventSystem>(true)
+            ?? FindFirstObjectByType<EventSystem>(FindObjectsInactive.Include);
+        if (localEventSystem != null && FindObjectsByType<EventSystem>(FindObjectsInactive.Exclude, FindObjectsSortMode.None).Length > 1)
+            localEventSystem.gameObject.SetActive(false);
+
         if (LevelWasLoadedToMainScene())
         {
             DeleteExtraObjects();

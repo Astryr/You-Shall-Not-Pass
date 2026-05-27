@@ -23,6 +23,8 @@ public class UI_InGame : MonoBehaviour
     [Header("Wave Control")]
     [SerializeField] private Button forceWaveBtn;
 
+    private WaveManager cachedWaveManager;
+
     private void Awake()
     {
         uiAnimator = GetComponentInParent<UI_Animator>();
@@ -30,11 +32,13 @@ public class UI_InGame : MonoBehaviour
         pauseUI = ui.GetComponentInChildren<UI_Pause>(true);
     }
 
+#if UNITY_EDITOR
     private void Update()
     {
         if (Input.GetKeyDown(KeyCode.F10))
             ui.SwitchTo(pauseUI.gameObject);
     }
+#endif
 
     public void EnableGameOverUI(bool enable)
     {
@@ -145,10 +149,16 @@ public class UI_InGame : MonoBehaviour
 
     public void ForceWaveButton()
     {
-        WaveManager waveManager = FindFirstObjectByType<WaveManager>();
-        if (waveManager == null || !waveManager.CanForceWave()) return;
-        waveManager.StartNewWave();
+        // Lazy-cache: el WaveManager se crea al cargar el nivel, no en Awake.
+        if (cachedWaveManager == null)
+            cachedWaveManager = FindFirstObjectByType<WaveManager>();
+
+        if (cachedWaveManager == null || !cachedWaveManager.CanForceWave()) return;
+        cachedWaveManager.StartNewWave();
     }
+
+    // Llamado por GameManager.PrepareLevel cuando el nivel está listo.
+    public void SetWaveManager(WaveManager wm) => cachedWaveManager = wm;
 
     /// <summary>Muestra/oculta y habilita/deshabilita el botón Force Wave según el estado de la oleada.</summary>
     public void UpdateForceWaveButton(bool visible)

@@ -101,6 +101,7 @@ public class GameManager : MonoBehaviour
 
         inGameUI.UpdateHealthPointsUI(currentHp, maxHp);
         inGameUI.UpdateCurrencyUI(currency);
+        inGameUI.SetWaveManager(newWaveManager);
 
         newWaveManager.ActivateWaveManager();
     }

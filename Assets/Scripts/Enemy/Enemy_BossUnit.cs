@@ -1,6 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using UnityEngine;
 
 public class Enemy_BossUnit : Enemy
@@ -45,7 +43,7 @@ public class Enemy_BossUnit : Enemy
 
     private void OnCollisionEnter(Collision collision)
     {
-        if (collision.collider.tag == "Enemy")
+        if (collision.collider.CompareTag("Enemy"))
             return;
 
         rb.useGravity = false;

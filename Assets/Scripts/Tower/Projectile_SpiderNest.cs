@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.Tracing;
 using UnityEngine;
 using UnityEngine.AI;
 
@@ -26,9 +23,11 @@ public class Projectile_SpiderNest : MonoBehaviour
         trail = GetComponent<TrailRenderer>();
         agent = GetComponent<NavMeshAgent>();
         objectPool = ObjectPoolManager.instance;
-
-        InvokeRepeating(nameof(UpdateClosestTarget), .1f, targetUpdateInterval);
     }
+
+    // Usar OnEnable/OnDisable para que el pool no deje corriendo la búsqueda mientras el objeto está inactivo.
+    private void OnEnable()  => InvokeRepeating(nameof(UpdateClosestTarget), .1f, targetUpdateInterval);
+    private void OnDisable() => CancelInvoke();
 
     private void Update()
     {

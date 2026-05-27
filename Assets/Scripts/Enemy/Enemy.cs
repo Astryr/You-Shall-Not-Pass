@@ -62,11 +62,7 @@ public class Enemy : MonoBehaviour, IDamagable
         objectPool = ObjectPoolManager.instance;
     }
 
-    protected virtual void Start()
-    {
-
-    }
-
+    protected virtual void Start() { }
 
     /// <summary>Llama el portal al sacar el enemigo del pool: copia ruta, resetea stats y arranca movimiento.</summary>
     public void SetupEnemy(EnemyPortal myNewPortal)
@@ -144,6 +140,8 @@ public class Enemy : MonoBehaviour, IDamagable
     }
     public void DisableHide(float duration)
     {
+        if (!gameObject.activeInHierarchy) return;
+
         if(disableHideCo != null)
             StopCoroutine(disableHideCo);
 
@@ -158,8 +156,8 @@ public class Enemy : MonoBehaviour, IDamagable
     }
     public void HideEnemy(float duration)
     {
-        if (canBeHidden == false)
-            return;
+        if (!gameObject.activeInHierarchy) return;
+        if (canBeHidden == false) return;
 
         if(hideCo != null)
             StopCoroutine(hideCo);
@@ -285,10 +283,7 @@ public class Enemy : MonoBehaviour, IDamagable
             myPortal.RemoveActiveEnemy(gameObject);
     }
 
-    protected virtual void OnEnable()
-    {
-
-    }
+    protected virtual void OnEnable() { }
 
     protected virtual void OnDisable()
     {

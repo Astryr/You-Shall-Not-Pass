@@ -13,10 +13,6 @@ public class CameraController : MonoBehaviour
     [Header("Movement Details")]
     [SerializeField] private float movementSpeed = 120;
     [SerializeField] private float mouseMovementSpeed = 5;
-    [SerializeField] private float edgeMovementSpeed = 50;
-    [SerializeField] private float edgeTreshold = 10;
-    private float screenWidth;
-    private float screenHeight;
 
     [Header("Rotation details")]
     [SerializeField] private Transform focusPoint;
@@ -40,7 +36,6 @@ public class CameraController : MonoBehaviour
     private float smoothTime = .1f;
     private Vector3 movementVelocity = Vector3.zero;
     private Vector3 mouseMovementVelocity = Vector3.zero;
-    private Vector3 edgeMovementVelocity = Vector3.zero;
     private Vector3 zoomVelocity = Vector3.zero;
     private Vector3 lastMousePosition;
 
@@ -49,8 +44,6 @@ public class CameraController : MonoBehaviour
 
     private void Start()
     {
-        screenWidth = Screen.width;
-        screenHeight = Screen.height;
         targetZoomDist = Mathf.Clamp(
             Vector3.Distance(transform.position, GetVirtualFocusPoint()),
             minZoom, maxZoom);
@@ -68,7 +61,6 @@ public class CameraController : MonoBehaviour
 
         HandleZoom();
         ApplyZoom();          // se llama CADA frame para suavizar aunque no haya input
-        //HandleEdgeMovement();
         HandleMouseMovement();
         HandleMovement();
 
@@ -283,30 +275,4 @@ public class CameraController : MonoBehaviour
         }
     }
 
-    private void HandleEdgeMovement()
-    {
-        Vector3 targetPosition = transform.position;
-        Vector3 mousePosition = Input.mousePosition;
-        Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-
-        if (mousePosition.x > screenWidth - edgeTreshold)
-            targetPosition += transform.right * edgeMovementSpeed * Time.deltaTime;
-
-        if(mousePosition.x < edgeTreshold)
-            targetPosition -= transform.right * edgeMovementSpeed * Time.deltaTime;
-
-        if (mousePosition.y > screenHeight - edgeTreshold)
-            targetPosition += flatForward * edgeMovementSpeed * Time.deltaTime;
-
-        if (mousePosition.y < edgeTreshold)
-            targetPosition -= flatForward * edgeMovementSpeed * Time.deltaTime;
-
-        if (Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
-        {
-            targetPosition = levelCenterPoint + (targetPosition - levelCenterPoint).normalized * maxDistanceFromCenter;
-        }
-
-
-        transform.position = Vector3.SmoothDamp(transform.position, targetPosition, ref edgeMovementVelocity, smoothTime);
-    }
 }

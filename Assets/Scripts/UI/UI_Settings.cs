@@ -78,6 +78,10 @@ public class UI_Settings : MonoBehaviour
 
     private void OnDisable()
     {
+        // Sliders pueden ser null si el panel se desactiva antes de que Unity asigne las referencias.
+        if (keyboardSenseSlider == null || mouseSenseSlider == null || sfxSlider == null || bgmSlider == null)
+            return;
+
         PlayerPrefs.SetFloat(keyboardSenseParametr, keyboardSenseSlider.value);
         PlayerPrefs.SetFloat(mouseSenseParamter, mouseSenseSlider.value);
         PlayerPrefs.SetFloat(sfxParamter, sfxSlider.value);
@@ -86,9 +90,12 @@ public class UI_Settings : MonoBehaviour
 
     private void OnEnable()
     {
+        if (keyboardSenseSlider == null || mouseSenseSlider == null || sfxSlider == null || bgmSlider == null)
+            return;
+
         keyboardSenseSlider.value = PlayerPrefs.GetFloat(keyboardSenseParametr, .6f);
-        mouseSenseSlider.value = PlayerPrefs.GetFloat(mouseSenseParamter, .6f);
-        sfxSlider.value = PlayerPrefs.GetFloat(sfxParamter, .6f);
-        bgmSlider.value = PlayerPrefs.GetFloat(bgmParamter, .6f);
+        mouseSenseSlider.value    = PlayerPrefs.GetFloat(mouseSenseParamter,    .6f);
+        sfxSlider.value           = PlayerPrefs.GetFloat(sfxParamter,           .6f);
+        bgmSlider.value           = PlayerPrefs.GetFloat(bgmParamter,           .6f);
     }
 }
