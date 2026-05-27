@@ -2,22 +2,11 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-// Los enemigos voladores ignoran los waypoints intermedios del suelo y vuelan
-// directamente al último punto (el castillo) usando la superficie NavMesh aérea.
+// Los enemigos voladores siguen la misma ruta de waypoints del suelo que los enemigos terrestres,
+// de modo que las torretas tengan tiempo de atacarlos antes de que lleguen al castillo.
 public class Enemy_Flying : Enemy
 {
     private List<Tower_Harpoon> observingTowers = new List<Tower_Harpoon>();
-
-    protected override bool IsAirborne => true;
-
-    // Vuela directo al destino final en lugar de seguir la ruta terrestre waypoint a waypoint.
-    protected override void ChangeWaypoint()
-    {
-        agent.SetDestination(GetFinalWaypoint());
-    }
-
-    // Un único destino: no hay waypoints intermedios a los que cambiar.
-    protected override bool ShouldChangeWaypoint() => false;
 
     public override float DistanceToFinishLine()
     {

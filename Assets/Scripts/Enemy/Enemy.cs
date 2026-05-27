@@ -20,6 +20,8 @@ public class Enemy : MonoBehaviour, IDamagable
     [SerializeField] private Transform centerPoint;
     public float maxHp = 100;
     public float currentHp = 4;
+    [Tooltip("Monedas que el jugador recibe al matar este enemigo. Ajustar por tipo en el prefab.")]
+    [SerializeField] private int currencyReward = 10;
     protected bool isDead;
 
     [Header("Movement")]
@@ -269,7 +271,7 @@ public class Enemy : MonoBehaviour, IDamagable
 
     public virtual void Die()
     {
-        gameManager?.UpdateCurrency(1);
+        gameManager?.UpdateCurrency(currencyReward);
         RemoveEnemy();
     }
 

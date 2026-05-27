@@ -13812,8 +13812,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyType: 6
   centerPoint: {fileID: 4067032619090270338}
-  maxHp: 100
+  maxHp: 200
   currentHp: 4
+  currencyReward: 40
+  movementSpeed: 3.5
   turnSpeed: 10
   myWaypoints: []
   empPrefab: {fileID: 6009035198743873899, guid: bb938011a8850d24fb9a481a04845ccf,

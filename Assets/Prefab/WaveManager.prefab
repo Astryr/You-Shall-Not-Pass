@@ -379,23 +379,23 @@ MonoBehaviour:
   levelWaves:
   - nextGrid: {fileID: 0}
     newPortals: []
-    basicEnemy: 0
+    basicEnemy: 8
     fastEnemy: 0
     heavyEnemy: 0
     swarmEnemy: 0
     stealthEnemy: 0
     flyingEnemy: 0
-    flyingBossEnemy: 1
+    flyingBossEnemy: 0
     spiderBossEnemy: 0
   - nextGrid: {fileID: 0}
     newPortals: []
-    basicEnemy: 0
+    basicEnemy: 12
     fastEnemy: 0
     heavyEnemy: 0
     swarmEnemy: 0
     stealthEnemy: 0
     flyingEnemy: 0
-    flyingBossEnemy: 1
+    flyingBossEnemy: 0
     spiderBossEnemy: 0
   waveIndex: 0
   yOffset: 5

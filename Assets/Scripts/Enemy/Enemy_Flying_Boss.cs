@@ -6,9 +6,11 @@ public class Enemy_Flying_Boss : Enemy_Flying
 {
     [Header("Boss Details")]
     [SerializeField] private GameObject bossUnitPrefab;
-    [SerializeField] private int amountToCreate = 150;
+    [Tooltip("Cantidad de unidades que suelta el boss. Cada una puede hacer 1 daño al castillo.")]
+    [SerializeField] private int amountToCreate = 15;
     private int unitsCreated;
-    [SerializeField] private float cooldown = .05f;
+    [Tooltip("Segundos entre cada unidad spawneada. Valor más bajo = llegada en avalancha.")]
+    [SerializeField] private float cooldown = 0.5f;
     private float creationTimer;
 
     private List<Enemy> createdEnemies = new List<Enemy>();

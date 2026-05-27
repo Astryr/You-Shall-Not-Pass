@@ -10043,8 +10043,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   enemyType: 5
   centerPoint: {fileID: 4214663812018921920}
-  maxHp: 100
+  maxHp: 35
   currentHp: 4
+  currencyReward: 15
+  movementSpeed: 3.5
   turnSpeed: 10
   myWaypoints: []
 --- !u!114 &3906975943691021782
@@ -10076,7 +10078,7 @@ NavMeshAgent:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3677966823586474816}
   m_Enabled: 1
-  m_AgentTypeID: -1372625422
+  m_AgentTypeID: 0
   m_Radius: 0.35
   m_Speed: 1.1
   m_Acceleration: 8

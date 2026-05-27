@@ -445,7 +445,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3fab4327a5679d49a5544c3bebec1c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  levelCurrency: 1000
+  levelCurrency: 200
   towerUnlocks:
   - towerName: Crossbow
     unlocked: 1
@@ -29476,6 +29476,136 @@ PrefabInstance:
       propertyPath: currentGrid
       value: 
       objectReference: {fileID: 6857900372899733560}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.size
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[0].fastEnemy
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[0].heavyEnemy
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[0].swarmEnemy
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[0].flyingBossEnemy
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[1].fastEnemy
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[1].heavyEnemy
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[1].swarmEnemy
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[1].stealthEnemy
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[1].flyingBossEnemy
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].fastEnemy
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].heavyEnemy
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].swarmEnemy
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].stealthEnemy
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].flyingEnemy
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].flyingBossEnemy
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[3].heavyEnemy
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[3].swarmEnemy
+      value: 6
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[3].stealthEnemy
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[3].flyingEnemy
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[3].flyingBossEnemy
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[4].heavyEnemy
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[4].swarmEnemy
+      value: 5
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[4].stealthEnemy
+      value: 4
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[4].flyingEnemy
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[4].flyingBossEnemy
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 4577474259592232261, guid: ab67d4e753e291f4da37ee714357499d,
         type: 3}
       propertyPath: m_LocalPosition.x

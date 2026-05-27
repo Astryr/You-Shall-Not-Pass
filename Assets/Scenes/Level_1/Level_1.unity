@@ -1103,7 +1103,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3fab4327a5679d49a5544c3bebec1c0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  levelCurrency: 1000
+  levelCurrency: 150
   levelMaxHp: 100
   towerUnlocks:
   - towerName: Crossbow
