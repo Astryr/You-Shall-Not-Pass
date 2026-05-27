@@ -15,7 +15,7 @@ public static class MobileBootstrap
         Application.targetFrameRate = 60;
         QualitySettings.vSyncCount = 0;
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
-        Android.AndroidDevice.SetSustainedPerformanceMode(true);
+        UnityEngine.Android.AndroidDevice.SetSustainedPerformanceMode(true);
 
         // Performant = índice 0 en QualitySettings del proyecto.
         if (QualitySettings.GetQualityLevel() != 0)
