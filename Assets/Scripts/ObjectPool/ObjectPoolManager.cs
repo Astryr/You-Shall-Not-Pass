@@ -28,6 +28,12 @@ public class ObjectPoolManager : MonoBehaviour
             Destroy(gameObject);
             return;
         }
+
+#if UNITY_ANDROID && !UNITY_EDITOR
+        // Menos instancias precargadas = menos RAM en dispositivos de 2 GB.
+        defaultPoolSize = Mathf.Min(defaultPoolSize, 30);
+        maxPoolSize = Mathf.Min(maxPoolSize, 200);
+#endif
     }
 
     private void Start()

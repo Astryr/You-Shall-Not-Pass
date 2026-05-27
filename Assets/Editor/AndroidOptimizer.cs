@@ -1,6 +1,8 @@
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.U2D;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.U2D;
 
 /// <summary>
@@ -10,29 +12,71 @@ using UnityEngine.U2D;
 /// </summary>
 public static class AndroidOptimizer
 {
+    private const string AndroidPackageId = "com.Astryr.YouShallNotPass";
+
+    // ─── Player Settings ─────────────────────────────────────────────────────
+
+    [MenuItem("Tools/Android Optimizer/5. Configure Player Settings for Android")]
+    public static void ConfigurePlayerSettings()
+    {
+        PlayerSettings.SetApplicationIdentifier(NamedBuildTarget.Android, AndroidPackageId);
+        PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel25;
+        PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel34;
+        PlayerSettings.SetScriptingBackend(NamedBuildTarget.Android, ScriptingImplementation.IL2CPP);
+        PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.Android, ManagedStrippingLevel.Low);
+        PlayerSettings.SetIl2CppCompilerConfiguration(NamedBuildTarget.Android, Il2CppCompilerConfiguration.Release);
+        PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
+        PlayerSettings.Android.minifyRelease = true;
+        PlayerSettings.stripEngineCode = true;
+        // Sustained Performance Mode ya está activado en ProjectSettings (AndroidEnableSustainedPerformanceMode).
+
+        // OpenGL ES 3 primero: más estable en gama baja (MediaTek, etc.).
+        PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.Android, false);
+        PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.OpenGLES3 });
+
+        EditorUserBuildSettings.androidBuildSubtarget = MobileTextureSubtarget.Generic;
+        EditorUserBuildSettings.development = false;
+        EditorUserBuildSettings.connectProfiler = false;
+
+        Debug.Log("[AndroidOptimizer] Player Settings configurados para Android (IL2CPP, ARM64, OpenGL ES3).");
+        EditorUtility.DisplayDialog("Player Settings",
+            "Android listo:\n" +
+            $"- Package: {AndroidPackageId}\n" +
+            "- IL2CPP + stripping Low\n" +
+            "- ARM64, OpenGL ES 3\n" +
+            "- Minify Release ON",
+            "OK");
+    }
+
     // ─── Texturas ────────────────────────────────────────────────────────────
 
     [MenuItem("Tools/Android Optimizer/1. Optimize UI Textures for Android")]
     public static void OptimizeUITextures()
     {
-        // Rutas de texturas propias del proyecto (no assets de terceros)
-        string[] searchFolders =
-        {
-            "Assets/Graphics/UI",
-        };
+        OptimizeTexturesInFolders(new[] { "Assets/Graphics/UI" }, maxSize: 512);
+    }
 
+    [MenuItem("Tools/Android Optimizer/6. Optimize 3D Textures for Android")]
+    public static void OptimizeGameTextures()
+    {
+        OptimizeTexturesInFolders(new[] { "Assets/Graphics" }, maxSize: 1024, excludeFolders: new[] { "Assets/Graphics/UI" });
+    }
+
+    private static void OptimizeTexturesInFolders(string[] searchFolders, int maxSize, string[] excludeFolders = null)
+    {
         string[] guids = AssetDatabase.FindAssets("t:Texture2D", searchFolders);
         int count = 0;
 
         foreach (string guid in guids)
         {
             string path = AssetDatabase.GUIDToAssetPath(guid);
+            if (ShouldSkipPath(path, excludeFolders)) continue;
+
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
             if (importer == null) continue;
 
             bool changed = false;
 
-            // DefaultTexturePlatform: forzar compresión si estaba en None
             TextureImporterPlatformSettings def = importer.GetDefaultPlatformTextureSettings();
             if (def.textureCompression == TextureImporterCompression.Uncompressed)
             {
@@ -41,19 +85,16 @@ public static class AndroidOptimizer
                 changed = true;
             }
 
-            // Android override
             TextureImporterPlatformSettings android = importer.GetPlatformTextureSettings("Android");
             bool needsOverride = !android.overridden
-                || android.maxTextureSize > 512
+                || android.maxTextureSize > maxSize
                 || android.format != TextureImporterFormat.ETC2_RGBA8;
 
             if (needsOverride)
             {
                 android.name               = "Android";
                 android.overridden         = true;
-                // Sprites UI: máx 512 (más que suficiente en 720p)
-                android.maxTextureSize     = 512;
-                // ETC2 RGBA8 soportado en todos los Android con OpenGL ES 3.0+ (Android 4.3+)
+                android.maxTextureSize     = maxSize;
                 android.format             = TextureImporterFormat.ETC2_RGBA8;
                 android.textureCompression = TextureImporterCompression.Compressed;
                 android.compressionQuality = 50;
@@ -70,8 +111,21 @@ public static class AndroidOptimizer
         }
 
         AssetDatabase.SaveAssets();
-        Debug.Log($"[AndroidOptimizer] Texturas UI optimizadas: {count} archivos actualizados.");
-        EditorUtility.DisplayDialog("Texturas UI", $"{count} texturas actualizadas para Android (ETC2, max 512px).", "OK");
+        Debug.Log($"[AndroidOptimizer] Texturas optimizadas ({maxSize}px): {count} archivos.");
+        EditorUtility.DisplayDialog("Texturas", $"{count} texturas actualizadas (ETC2, max {maxSize}px).", "OK");
+    }
+
+    private static bool ShouldSkipPath(string path, string[] excludeFolders)
+    {
+        if (excludeFolders == null) return false;
+
+        foreach (string folder in excludeFolders)
+        {
+            if (path.StartsWith(folder + "/") || path == folder)
+                return true;
+        }
+
+        return false;
     }
 
     // ─── Audio ───────────────────────────────────────────────────────────────
@@ -238,11 +292,21 @@ public static class AndroidOptimizer
     [MenuItem("Tools/Android Optimizer/0. Run ALL Optimizations")]
     public static void RunAll()
     {
+        ConfigurePlayerSettings();
         OptimizeUITextures();
+        OptimizeGameTextures();
         OptimizeAudio();
         CreateTowerIconsAtlas();
 
-        Debug.Log("[AndroidOptimizer] Todas las optimizaciones aplicadas. " +
-                  "Recordá hacer el bake de Occlusion Culling y Lighting manualmente desde el Editor.");
+        Debug.Log("[AndroidOptimizer] Optimizaciones aplicadas. " +
+                  "Opcional: marcar tiles estáticos (opción 3) y hacer bake de Occlusion/Lighting.");
+        EditorUtility.DisplayDialog("Android Optimizer",
+            "Listo para build:\n" +
+            "1. Player Settings\n" +
+            "2. Texturas UI + 3D\n" +
+            "3. Audio\n" +
+            "4. Sprite Atlas\n\n" +
+            "Build: File → Build Profiles → Android → Build And Run",
+            "OK");
     }
 }
