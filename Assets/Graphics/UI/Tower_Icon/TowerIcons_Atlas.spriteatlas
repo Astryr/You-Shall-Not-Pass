@@ -49,10 +49,34 @@ SpriteAtlas:
     bindAsDefault: 1
     isAtlasV2: 0
     cachedData: {fileID: 0}
-    packedSpriteRenderDataKeys: []
+    packedSpriteRenderDataKeys:
+    - ff61fc26e078a364db7f5cf9876215e9: 857461376
+    - bca0deca90e1be541bb2d05bc14b3bf7: 808930612
+    - a978c7eb8d456f242966d858cc75d59e: -401230488
+    - 0c81a67cbd720304b9d040ba30bf688e: 169482167
+    - b2c2114df6d883d4896addfcf885dc72: -175881985
+    - b2c2114df6d883d4896addfcf885dc72: 130210641
+    - 05e63c4eacaadc14d97e84a334184917: 488387213
+    - bec9f96e1ad24b44eaa76478fa455217: -76150514
   m_MasterAtlas: {fileID: 0}
-  m_PackedSprites: []
-  m_PackedSpriteNamesToIndex: []
+  m_PackedSprites:
+  - {fileID: 857461376, guid: ff61fc26e078a364db7f5cf9876215e9, type: 3}
+  - {fileID: 808930612, guid: bca0deca90e1be541bb2d05bc14b3bf7, type: 3}
+  - {fileID: -401230488, guid: a978c7eb8d456f242966d858cc75d59e, type: 3}
+  - {fileID: 169482167, guid: 0c81a67cbd720304b9d040ba30bf688e, type: 3}
+  - {fileID: -175881985, guid: b2c2114df6d883d4896addfcf885dc72, type: 3}
+  - {fileID: 130210641, guid: b2c2114df6d883d4896addfcf885dc72, type: 3}
+  - {fileID: 488387213, guid: 05e63c4eacaadc14d97e84a334184917, type: 3}
+  - {fileID: -76150514, guid: bec9f96e1ad24b44eaa76478fa455217, type: 3}
+  m_PackedSpriteNamesToIndex:
+  - 7_0
+  - 6_0
+  - 2_0
+  - 1_0
+  - 3_1
+  - 3_0
+  - 4_0
+  - 5_0
   m_RenderDataMap: {}
   m_Tag: TowerIcons_Atlas
   m_IsVariant: 0
