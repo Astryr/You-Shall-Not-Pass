@@ -130,6 +130,8 @@ public class EnemyPortal : MonoBehaviour
     }
 
     public List<GameObject> GetActiveEnemies() => activeEnemies;
+    // True mientras haya enemigos esperando ser spawneados por este portal.
+    public bool HasPendingEnemies() => enemiesToCreate.Count > 0;
 
 
     private void CollectWaypoints()

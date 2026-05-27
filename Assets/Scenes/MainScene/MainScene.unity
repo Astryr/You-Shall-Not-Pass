@@ -5818,6 +5818,7 @@ MonoBehaviour:
   buildSlotYOffset: 0.25
   tileMoveDuration: 0.1
   tileDelay: 0.01
+  tilesPerBatch: 3
   yOffset: 5
   mainMenuObjects: []
   mainSceneGrid: {fileID: 5740563069157509357}
@@ -6142,6 +6143,11 @@ PrefabInstance:
       propertyPath: tutorialUI
       value: 
       objectReference: {fileID: 1381709122}
+    - target: {fileID: 1295829432510752608, guid: eb3918318c15e3c42a59f619a86c42d5,
+        type: 3}
+      propertyPath: forceWaveBtn
+      value: 
+      objectReference: {fileID: 2733247548249982496}
     - target: {fileID: 1432296200427249187, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_IsActive
@@ -6963,6 +6969,11 @@ PrefabInstance:
       propertyPath: m_AnchorMax.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8933233577887195912, guid: eb3918318c15e3c42a59f619a86c42d5,
+        type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: -13
+      objectReference: {fileID: 0}
     - target: {fileID: 9057088494564698845, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_AnchorMax.y
@@ -6994,7 +7005,8 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedGameObjects:
+    - {fileID: 7777469803632122141, guid: eb3918318c15e3c42a59f619a86c42d5, type: 3}
     m_AddedGameObjects:
     - targetCorrespondingSourceObject: {fileID: 961704849765912267, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
@@ -7010,6 +7022,18 @@ PrefabInstance:
       addedObject: {fileID: 1381709123}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: eb3918318c15e3c42a59f619a86c42d5, type: 3}
+--- !u!114 &2733247548249982496 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2935573400266273327, guid: eb3918318c15e3c42a59f619a86c42d5,
+    type: 3}
+  m_PrefabInstance: {fileID: 2733247548249982495}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4e29b1a8efbd4b44bb3f3716e73f07ff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &5740563069157509357 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4349987180139617317, guid: ec8e528377ad3c743a8dbc52771bb4af,

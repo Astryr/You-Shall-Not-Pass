@@ -23,6 +23,8 @@ public class Enemy : MonoBehaviour, IDamagable
     protected bool isDead;
 
     [Header("Movement")]
+    [Tooltip("Velocidad del agente. Sobreescribe el valor del NavMeshAgent en el prefab.")]
+    [SerializeField] private float movementSpeed = 3.5f;
     [SerializeField] private float turnSpeed = 10;
     [SerializeField] protected Vector3[] myWaypoints;
 
@@ -30,6 +32,9 @@ public class Enemy : MonoBehaviour, IDamagable
     protected int currentWaypointIndex;
     protected float totalDistance;
     protected float originalSpeed;
+
+    // Las subclases aéreas sobreescriben esto para evitar el snap al NavMesh terrestre.
+    protected virtual bool IsAirborne => false;
 
     protected bool canBeHidden = true;
     protected bool isHidden;
@@ -43,6 +48,7 @@ public class Enemy : MonoBehaviour, IDamagable
         agent = GetComponent<NavMeshAgent>();
         // Rotación manual (FaceTarget); el agente solo calcula path y velocidad.
         agent.updateRotation = false;
+        agent.speed = movementSpeed;
         agent.avoidancePriority = Mathf.RoundToInt(agent.speed * 10);
 
         visuals = GetComponent<Enemy_Visuals>();
@@ -97,20 +103,19 @@ public class Enemy : MonoBehaviour, IDamagable
 
         agent.speed = originalSpeed;
 
-        // Alinear al NavMesh (reuso desde pool puede dejar el transform fuera de malla).
-        UnityEngine.AI.NavMeshHit hit;
-        bool positionFound = UnityEngine.AI.NavMesh.SamplePosition(transform.position, out hit, 50.0f, UnityEngine.AI.NavMesh.AllAreas);
-
-        if (positionFound)
-        {
-            transform.position = hit.position;
-        }
-
         if (agent.gameObject.activeInHierarchy && this.GetType() != typeof(Enemy_BossUnit))
         {
             agent.enabled = true;
-            if (positionFound)
-                agent.Warp(hit.position);
+
+            if (!IsAirborne)
+            {
+                // Alinear al NavMesh terrestre (reuso desde pool puede dejar el transform fuera de malla).
+                if (UnityEngine.AI.NavMesh.SamplePosition(transform.position, out UnityEngine.AI.NavMeshHit hit, 50.0f, UnityEngine.AI.NavMesh.AllAreas))
+                {
+                    transform.position = hit.position;
+                    agent.Warp(hit.position);
+                }
+            }
         }
     }
 

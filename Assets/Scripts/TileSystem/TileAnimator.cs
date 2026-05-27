@@ -13,7 +13,10 @@ public class TileAnimator : MonoBehaviour
 
     [Header("Grid Animation Details")]
     [SerializeField] private float tileMoveDuration = .1f;
-    [SerializeField] private float tileDelay = .1f;
+    [Tooltip("Pausa entre cada lote de tiles. Reducir para cargar más rápido.")]
+    [SerializeField] private float tileDelay = .04f;
+    [Tooltip("Cuántos tiles se lanzan por cada intervalo de delay. Mayor valor = carga más rápida.")]
+    [SerializeField] private int tilesPerBatch = 3;
     [SerializeField] private float yOffset = 5;
 
     [Space]
@@ -54,18 +57,22 @@ public class TileAnimator : MonoBehaviour
     {
         isGridMoving = true;
 
-        for (int i = 0; i < objectsToMove.Count; i++)
+        // Procesa los tiles en lotes: lanza 'tilesPerBatch' tiles por cada intervalo de delay.
+        // Con los valores por defecto (lote=3, delay=0.04s) una grilla de 50 tiles tarda ~0.7s
+        // en lugar de los ~5s que tardaba con lote=1 y delay=0.1s.
+        int batch = Mathf.Max(1, tilesPerBatch);
+
+        for (int i = 0; i < objectsToMove.Count; i += batch)
         {
             yield return new WaitForSeconds(tileDelay);
 
-            if (objectsToMove[i] == null)
-                continue;
+            for (int j = i; j < Mathf.Min(i + batch, objectsToMove.Count); j++)
+            {
+                if (objectsToMove[j] == null) continue;
 
-            Transform tile = objectsToMove[i].transform;
-
-            Vector3 targetPosition = tile.position + new Vector3(0,yOffset, 0);
-
-            MoveTile(tile, targetPosition,tileMoveDuration);
+                Transform tile = objectsToMove[j].transform;
+                MoveTile(tile, tile.position + new Vector3(0, yOffset, 0), tileMoveDuration);
+            }
         }
 
         foreach (var tile in objectsToMove)

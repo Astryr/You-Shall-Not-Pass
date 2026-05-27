@@ -18821,6 +18821,7 @@ MonoBehaviour:
   centerPoint: {fileID: 1953249604632598093}
   maxHp: 100
   currentHp: 4
+  movementSpeed: 2
   turnSpeed: 10
   myWaypoints: []
   enemiesToHide: []

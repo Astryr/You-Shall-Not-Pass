@@ -29,9 +29,6 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private MeshCollider[] flyingNavMeshColliders;
 
     [Header("Wave Details")]
-    [SerializeField] private bool manualWaveStart;
-    [SerializeField] private float timeBetweenWaves = 10;
-    [SerializeField] private float waveTimer;
     [SerializeField] private WaveDetails[] levelWaves;
     [SerializeField] private int waveIndex;
 
@@ -49,9 +46,12 @@ public class WaveManager : MonoBehaviour
     [SerializeField] private GameObject flyingBossEnemy;
     [SerializeField] private GameObject spiderBossEnemy;
     private List<EnemyPortal> enemyPortals;
-    private bool waveTimerEnabled;
     private bool makingNextWave;
+    private bool waveInProgress;   // true mientras la oleada actual tiene enemigos vivos o en cola
     public bool gameBegun;
+
+    /// <summary>El jugador puede forzar la siguiente oleada solo cuando la actual terminó y quedan oleadas pendientes.</summary>
+    public bool CanForceWave() => gameBegun && !waveInProgress && !HasNoMoreWaves();
 
     private void Awake()
     {
@@ -73,16 +73,12 @@ public class WaveManager : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.T))
             ActivateWaveManager();
 #endif
-
-        if (gameBegun == false)
-            return;
-
-        HandleWaveTimer();
     }
 
     public void ActivateWaveManager()
     {
         gameBegun = true;
+        waveInProgress = false;
         inGameUI = gameManager.inGameUI;
         StartPreparationForNextWave();
     }
@@ -111,25 +107,15 @@ public class WaveManager : MonoBehaviour
     }
     public void StartNewWave()
     {
+        if (!CanForceWave()) return;
+
+        waveInProgress = true;
         UpdateNavMeshes();
         GiveEnemiesToPortals();
-        EnableWaveTimer(false);
         makingNextWave = false;
+        inGameUI.UpdateForceWaveButton(false);
     }
 
-    private void HandleWaveTimer()
-    {
-        if (waveTimerEnabled == false)
-            return;
-
-        waveTimer -= Time.deltaTime;
-        inGameUI.UpdateWaveTimerUI(waveTimer);
-
-
-        if (waveTimer <= 0)
-            StartNewWave();
-
-    }
     private void GiveEnemiesToPortals()
     {
         List<GameObject> newEnemies = GetNewEnemies();
@@ -225,25 +211,11 @@ public class WaveManager : MonoBehaviour
 
         Destroy(tileToRemove.gameObject, 1);
     }
-    private void EnableWaveTimer(bool enable)
-    {
-        if (waveTimerEnabled == enable)
-            return;
-
-        waveTimer = timeBetweenWaves;
-        waveTimerEnabled = enable;
-        inGameUI.EnableWaveTimer(enable);
-    }
-
     private void StartPreparationForNextWave()
     {
-        if (manualWaveStart)
-        {
-            EnableWaveTimer(false);
-            return;
-        }
-
-        EnableWaveTimer(true);
+        waveInProgress = false;
+        // Habilita el botón solo si quedan oleadas por jugar.
+        inGameUI?.UpdateForceWaveButton(!HasNoMoreWaves());
     }
     private void EnableNewPortals(EnemyPortal[] newPortals)
     {
@@ -328,15 +300,56 @@ public class WaveManager : MonoBehaviour
     }
     public WaveDetails[] GetLevelWaves() => levelWaves;
 
+    // Click derecho en el componente WaveManager → "Setup Level X Waves" para aplicar una configuración por defecto.
+
+    [ContextMenu("Setup Level 1 Waves")]
+    private void SetupLevel1DefaultWaves()
+    {
+        levelWaves = new WaveDetails[]
+        {
+            new WaveDetails { basicEnemy = 8 },                          // Oleada 1: básicos lentos
+            new WaveDetails { basicEnemy = 12 },                         // Oleada 2: más básicos
+            new WaveDetails { basicEnemy = 15, fastEnemy = 3 }           // Oleada 3: básicos + rápidos
+        };
+        Debug.Log("[WaveManager] Oleadas del Nivel 1 configuradas.");
+    }
+
+    [ContextMenu("Setup Level 2 Waves")]
+    private void SetupLevel2DefaultWaves()
+    {
+        levelWaves = new WaveDetails[]
+        {
+            new WaveDetails { basicEnemy = 10, fastEnemy = 2 },                              // Oleada 1
+            new WaveDetails { basicEnemy = 8,  fastEnemy = 4,  heavyEnemy = 2 },             // Oleada 2
+            new WaveDetails { basicEnemy = 5,  fastEnemy = 5,  heavyEnemy = 3, swarmEnemy = 2 },   // Oleada 3
+            new WaveDetails { fastEnemy = 6,   heavyEnemy = 4, swarmEnemy = 3, stealthEnemy = 1 }  // Oleada 4
+        };
+        Debug.Log("[WaveManager] Oleadas del Nivel 2 configuradas.");
+    }
+
+    [ContextMenu("Setup Level 3 Waves")]
+    private void SetupLevel3DefaultWaves()
+    {
+        levelWaves = new WaveDetails[]
+        {
+            new WaveDetails { fastEnemy = 8,  heavyEnemy = 4,  swarmEnemy = 2 },                                    // Oleada 1
+            new WaveDetails { fastEnemy = 6,  heavyEnemy = 5,  swarmEnemy = 4,  stealthEnemy = 2 },                 // Oleada 2
+            new WaveDetails { fastEnemy = 4,  heavyEnemy = 6,  swarmEnemy = 5,  stealthEnemy = 3, flyingEnemy = 1 }, // Oleada 3
+            new WaveDetails { heavyEnemy = 5, swarmEnemy = 6,  stealthEnemy = 4, flyingEnemy = 2 },                  // Oleada 4
+            new WaveDetails { heavyEnemy = 4, swarmEnemy = 5,  stealthEnemy = 4, flyingEnemy = 3, flyingBossEnemy = 1 } // Oleada 5 (boss)
+        };
+        Debug.Log("[WaveManager] Oleadas del Nivel 3 configuradas.");
+    }
+
 
     private bool AllEnemiesDefeated()
     {
         foreach (EnemyPortal portal in enemyPortals)
         {
-            if (portal.GetActiveEnemies().Count > 0)
+            // Considera tanto los enemigos activos como los que aún esperan en la cola de spawn.
+            if (portal.GetActiveEnemies().Count > 0 || portal.HasPendingEnemies())
                 return false;
         }
-
         return true;
     }
     private bool HasNewLayout() => waveIndex < levelWaves.Length && levelWaves[waveIndex].nextGrid != null;

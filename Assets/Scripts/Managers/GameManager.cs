@@ -89,13 +89,14 @@ public class GameManager : MonoBehaviour
         }
     }
     
-    public void PrepareLevel(int levelCurrency, WaveManager newWaveManager)
+    public void PrepareLevel(int levelCurrency, WaveManager newWaveManager, int levelMaxHp = 1)
     {
         gameLost = false;
         enemiesKilled = 0;
 
         currentActiveWaveManager = newWaveManager;
         currency = levelCurrency;
+        maxHp    = levelMaxHp;
         currentHp = maxHp;
 
         inGameUI.UpdateHealthPointsUI(currentHp, maxHp);

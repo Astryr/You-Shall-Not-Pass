@@ -13,6 +13,10 @@ public class LevelSetup : MonoBehaviour
 
     [Header("Level Details")]
     [SerializeField] private int levelCurrency = 1000;
+    [Tooltip("Cuántos enemigos puede absorber el castillo antes de que el jugador pierda.")]
+    [SerializeField] private int levelMaxHp = 100;
+    [Tooltip("Activar solo en el Nivel 1. Muestra el tutorial la primera vez que el jugador juega.")]
+    [SerializeField] private bool showTutorialIfFirstTime = false;
     [SerializeField] private List<TowerUnlockData> towerUnlocks;
 
     [Header("Level Setup")]
@@ -41,7 +45,11 @@ public class LevelSetup : MonoBehaviour
             ui.EnableInGameUI(true);
 
             gameManager = FindFirstObjectByType<GameManager>();
-            gameManager.PrepareLevel(levelCurrency,myWaveManager);
+            gameManager.PrepareLevel(levelCurrency, myWaveManager, levelMaxHp);
+
+            // Solo el Nivel 1 muestra el tutorial automático la primera vez que el jugador juega.
+            if (showTutorialIfFirstTime)
+                gameManager.inGameUI.ShowTutorialIfFirstTime();
 
             // La transición desde menú puede dejar controles apagados hasta que termina el tween; al estar el nivel listo, activar zoom/pan.
             FindFirstObjectByType<CameraController>()?.EnableCameraConrolls(true);

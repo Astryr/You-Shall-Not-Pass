@@ -1104,6 +1104,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   levelCurrency: 1000
+  levelMaxHp: 100
   towerUnlocks:
   - towerName: Crossbow
     unlocked: 1
@@ -122029,12 +122030,32 @@ PrefabInstance:
     - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
         type: 3}
       propertyPath: levelWaves.Array.size
-      value: 1
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
         type: 3}
       propertyPath: levelWaves.Array.data[0].fastEnemy
-      value: 1
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].fastEnemy
+      value: 3
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[0].basicEnemy
+      value: 8
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[1].basicEnemy
+      value: 12
+      objectReference: {fileID: 0}
+    - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
+        type: 3}
+      propertyPath: levelWaves.Array.data[2].basicEnemy
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 2428050346908040201, guid: ab67d4e753e291f4da37ee714357499d,
         type: 3}
@@ -125114,6 +125135,7 @@ MonoBehaviour:
   buildSlotYOffset: 0.25
   tileMoveDuration: 0.1
   tileDelay: 0
+  tilesPerBatch: 3
   yOffset: 5
   mainMenuObjects: []
   mainSceneGrid: {fileID: 709803859}
