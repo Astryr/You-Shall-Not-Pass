@@ -16,11 +16,15 @@ public class UI_Tutorial : MonoBehaviour
 
     [TextArea(2, 5)]
     [SerializeField] private string controlsText =
-        "Tocá una CASILLA del mapa → se abre el menú de torres.\nElegí una torre y confirmá para construirla.";
+        "Tocá una casilla del mapa para abrir el menú de torres.\n" +
+        "Un dedo: mover cámara. Dos dedos: zoom.\n" +
+        "Tocá FORCE WAVE para iniciar cada oleada.";
 
     [TextArea(2, 5)]
     [SerializeField] private string tipText =
-        "Cada enemigo derrotado te da recursos para construir más torres.\n¡Sobreviví todas las oleadas para ganar!";
+        "Cada enemigo derrotado da recursos para más torres.\n" +
+        "Si muchos enemigos llegan al castillo, perdés.\n" +
+        "Podés reabrir esta ayuda con el botón ? del HUD.";
 
     [Header("Referencias UI (asignar en Inspector)")]
     [SerializeField] private TextMeshProUGUI objectiveTMP;
@@ -32,15 +36,18 @@ public class UI_Tutorial : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    /// <summary>Al iniciar el nivel muestra el tutorial si es la primera vez, SIN pausar el juego.</summary>
+    /// <summary>Muestra el tutorial al entrar al Nivel Tutorial (sin pausar).</summary>
+    public void ShowOnLevelStart()
+    {
+        PopulateTexts();
+        gameObject.SetActive(true);
+    }
+
+    /// <summary>Primera vez global (reservado para otros flujos).</summary>
     public void ShowIfFirstTime()
     {
         if (!PlayerPrefs.HasKey(TutorialShownKey))
-        {
-            PopulateTexts();
-            gameObject.SetActive(true);
-            // No se pausa: el juego corre en segundo plano mientras el jugador lee.
-        }
+            ShowOnLevelStart();
     }
 
     /// <summary>Apertura manual (botón ? del HUD): pausa el juego mientras se lee.</summary>

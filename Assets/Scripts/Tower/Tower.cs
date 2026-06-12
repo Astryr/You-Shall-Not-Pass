@@ -124,6 +124,9 @@ public class Tower : MonoBehaviour
     protected virtual void Attack()
     {
         lastTimeAttacked = Time.time;
+
+        if (attackSfx != null && attackSfx.clip != null)
+            AudioManager.instance?.PlaySFX(attackSfx, true);
     }
 
     protected virtual bool CanAttack()

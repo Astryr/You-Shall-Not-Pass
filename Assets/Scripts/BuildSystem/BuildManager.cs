@@ -185,33 +185,60 @@ public class BuildManager : MonoBehaviour
 
         }
     }
+    public void ClearBuildSelection()
+    {
+        if (selectedBuildSlot == null)
+        {
+            DisableBuildMenu();
+            return;
+        }
+
+        SafeUnselectSlot(selectedBuildSlot);
+        selectedBuildSlot = null;
+        DisableBuildMenu();
+    }
+
     public void CancelBuildAction()
     {
         if (selectedBuildSlot == null)
             return;
-    
-        ui.buildButtonsUI.GetLastSelectedButton()?.SelectButton(false);
 
-        selectedBuildSlot.UnselectTile();
+        ui?.buildButtonsUI?.GetLastSelectedButton()?.SelectButton(false);
+        SafeUnselectSlot(selectedBuildSlot);
         selectedBuildSlot = null;
         DisableBuildMenu();
     }
+
     public void SelectBuildSlot(BuildSlot newSlot)
     {
-        if (selectedBuildSlot != null)
-            selectedBuildSlot.UnselectTile();
+        if (selectedBuildSlot != null && selectedBuildSlot != newSlot)
+            SafeUnselectSlot(selectedBuildSlot);
 
         selectedBuildSlot = newSlot;
     }
+
+    private void SafeUnselectSlot(BuildSlot slot)
+    {
+        if (slot == null)
+            return;
+
+        if (!slot.gameObject.activeInHierarchy)
+            slot.SnapToDefaultPositionImmediately();
+        else
+            slot.UnselectTile();
+    }
     public void EnableBuildMenu()
     {
-        if (selectedBuildSlot != null)
+        if (ui?.buildButtonsUI == null)
             return;
 
         ui.buildButtonsUI.ShowBuildButtons(true);
     }
     private void DisableBuildMenu()
     {
+        if (ui?.buildButtonsUI == null)
+            return;
+
         ui.buildButtonsUI.ShowBuildButtons(false);
     }
     public BuildSlot GetSelectedSlot() => selectedBuildSlot;

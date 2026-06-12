@@ -126,6 +126,7 @@ public class UI_InGame : MonoBehaviour
     /// (Nivel 1); los demás niveles no lo invocan para que no reaparezca innecesariamente.
     /// </summary>
     public void ShowTutorialIfFirstTime() => tutorialUI?.ShowIfFirstTime();
+    public void ShowTutorialOnLevelStart() => tutorialUI?.ShowOnLevelStart();
 
     /// <summary>Abre el tutorial manualmente (botón ? del HUD).</summary>
     public void OpenTutorial() => tutorialUI?.Show();

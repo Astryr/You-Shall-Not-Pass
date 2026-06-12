@@ -43,6 +43,7 @@ public class LevelManager : MonoBehaviour
 
     private IEnumerator LoadLevelCo(string levelName)
     {
+        ui.ShowLoadingScreen("Recargando nivel...");
         CleanUpScene();
         ui.EnableInGameUI(false);
 
@@ -55,11 +56,15 @@ public class LevelManager : MonoBehaviour
 
     private IEnumerator LoadLevelFromMenuCo(string levelName)
     {
+        ui.ShowLoadingScreen("Cargando nivel...");
+
         tileAnimator.ShowMainGrid(false);
         ui.EnableMainMenuUI(false);
 
+        BuildManager buildManager = FindFirstObjectByType<BuildManager>();
+        buildManager?.ClearBuildSelection();
+
         cameraEffects.SwitchToGameView();
-        
 
         yield return tileAnimator.GetCurrentActiveCo();
 
@@ -83,7 +88,9 @@ public class LevelManager : MonoBehaviour
 
         yield return tileAnimator.GetCurrentActiveCo();
 
-        ui.EnableMainMenuUI(true);     
+        ui.HideLoadingScreen();
+        ui.EnableMainMenuUI(true);
+        AudioManager.instance?.PlayMenuMusic();
     }
 
     private void LoadScene(string sceneNameToLoad)

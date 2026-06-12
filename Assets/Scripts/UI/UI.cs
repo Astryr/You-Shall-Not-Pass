@@ -14,6 +14,7 @@ public class UI : MonoBehaviour
     public UI_InGame inGameUI { get; private set; }
     public UI_Animator uiAnim { get; private set; }
     public UI_BuildButtonsHolder buildButtonsUI { get; private set; }
+    public UI_LoadingScreen loadingScreen { get; private set; }
 
     [Header("UI SFX")]
     public AudioSource onHoverSfx;
@@ -23,13 +24,14 @@ public class UI : MonoBehaviour
 
     private void Awake()
     {
-        FixCanvasScalersForMobile();
-
         buildButtonsUI = GetComponentInChildren<UI_BuildButtonsHolder>(true);
         settingsUI = GetComponentInChildren<UI_Settings>(true);
         mainMenuUI = GetComponentInChildren<UI_MainMenu>(true);
         inGameUI = GetComponentInChildren<UI_InGame>(true);
         uiAnim = GetComponent<UI_Animator>();
+        loadingScreen = GetComponentInChildren<UI_LoadingScreen>(true);
+        if (loadingScreen == null)
+            loadingScreen = gameObject.AddComponent<UI_LoadingScreen>();
 
         ActivateFadeEffect(true);
 
@@ -39,22 +41,6 @@ public class UI : MonoBehaviour
         if (GameManager.instance != null && GameManager.instance.IsTestingLevel())
             SwitchTo(inGameUI.gameObject);
     }
-
-    private void FixCanvasScalersForMobile()
-    {
-        CanvasScaler[] scalers = GetComponentsInChildren<CanvasScaler>(true);
-        foreach (var scaler in scalers)
-        {
-            if (scaler.uiScaleMode != CanvasScaler.ScaleMode.ScaleWithScreenSize)
-            {
-                scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-                scaler.referenceResolution = new Vector2(720, 1600); // TCL 408 default assumption, adjusts automatically
-                scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-                scaler.matchWidthOrHeight = 0.5f;
-            }
-        }
-    }
-
 
     public void SwitchTo(GameObject uiToEnable)
     {
@@ -79,6 +65,9 @@ public class UI : MonoBehaviour
     {
         if(enable)
         {
+            if (!TryRefreshInGameUI())
+                return;
+
             ClearCanvasIsolationForEndGameScreen();
             SwitchTo(inGameUI.gameObject);
             inGameUI.ResetToGameplayLayout();
@@ -147,6 +136,19 @@ public class UI : MonoBehaviour
         Application.Quit();
 #endif
     }
+
+    private bool TryRefreshInGameUI()
+    {
+        if (inGameUI != null)
+            return true;
+
+        inGameUI = GetComponentInChildren<UI_InGame>(true);
+        return inGameUI != null;
+    }
+
+    public void ShowLoadingScreen(string message = null) => loadingScreen?.Show(message);
+    public void HideLoadingScreen() => loadingScreen?.Hide();
+    public void SetLoadingProgress(float progress) => loadingScreen?.SetProgress(progress);
 
     public void ActivateFadeEffect(bool fadeIn)
     {

@@ -96,11 +96,30 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     private void MoveTileUp()
     {
         Vector3 targetPosition = transform.position + new Vector3(0, tileAnim.GetBuildOffset(), 0);
+
+        if (!isActiveAndEnabled)
+        {
+            transform.position = targetPosition;
+            return;
+        }
+
         currentMovementUpCo = StartCoroutine(tileAnim.MoveTileCo(transform, targetPosition));
     }
-    
+
     private void MoveToDefaultPosition()
     {
+        if (moveToDefaultCo != null)
+        {
+            StopCoroutine(moveToDefaultCo);
+            moveToDefaultCo = null;
+        }
+
+        if (!isActiveAndEnabled)
+        {
+            transform.position = defaultPosition;
+            return;
+        }
+
         moveToDefaultCo = StartCoroutine(tileAnim.MoveTileCo(transform, defaultPosition));
     }
     public void SnapToDefaultPositionImmediately()

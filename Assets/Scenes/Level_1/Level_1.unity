@@ -1105,6 +1105,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   levelCurrency: 150
   levelMaxHp: 100
+  showTutorialIfFirstTime: 1
   towerUnlocks:
   - towerName: Crossbow
     unlocked: 1
@@ -1131,7 +1132,6 @@ MonoBehaviour:
   - {fileID: 410087039}
   - {fileID: 832575517}
   - {fileID: 195552681}
-  - {fileID: 1697138673}
   - {fileID: 2099748365}
   - {fileID: 848097345}
 --- !u!4 &32691649
@@ -101164,7 +101164,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_MatchWidthOrHeight
-      value: 0.5
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
@@ -101174,7 +101174,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_ReferenceResolution.y
-      value: 1600
+      value: 1612
       objectReference: {fileID: 0}
     - target: {fileID: 8676697743699146176, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}

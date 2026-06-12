@@ -18,9 +18,16 @@ public class UI_BuildButtonsHolder : MonoBehaviour
 
     private void Awake()
     {
-        uiAnim = GetComponentInParent<UI_Animator>();
-        buildButtonEffects = GetComponentsInChildren<UI_BuildButtonOnHoverEffect>();
-        buildButtons = GetComponentsInChildren<UI_BuildButton>();
+        // InGame_UI arranca desactivado; sin includeInactive uiAnim queda null y rompe al tocar una casilla.
+        uiAnim = GetComponentInParent<UI_Animator>(true);
+        buildButtonEffects = GetComponentsInChildren<UI_BuildButtonOnHoverEffect>(true);
+        buildButtons = GetComponentsInChildren<UI_BuildButton>(true);
+    }
+
+    private void EnsureUiAnim()
+    {
+        if (uiAnim == null)
+            uiAnim = GetComponentInParent<UI_Animator>(true);
     }
 
     private void Update()
@@ -108,12 +115,18 @@ public class UI_BuildButtonsHolder : MonoBehaviour
         float yOffset = isBuildMenuActive ? yPositionOffset : -yPositionOffset;
         float methodDelay = isBuildMenuActive ? openAnimationDuration : 0;
 
-        uiAnim.ChangePosition(transform, new Vector3(0, yOffset), openAnimationDuration);
+        EnsureUiAnim();
+        if (uiAnim != null)
+            uiAnim.ChangePosition(transform, new Vector3(0, yOffset), openAnimationDuration);
+
         Invoke(nameof(ToggleButtonMovement), methodDelay);
     }
 
     private void ToggleButtonMovement()
     {
+        if (buildButtonEffects == null)
+            return;
+
         foreach (var button in buildButtonEffects)
         {
             button.ToggleMovement(isBuildMenuActive);

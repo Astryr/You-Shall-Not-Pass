@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class LevelSetup : MonoBehaviour
 {
@@ -28,30 +29,42 @@ public class LevelSetup : MonoBehaviour
     {
         if (LevelWasLoadedToMainScene())
         {
+            ui = FindMainSceneUI();
+            ui?.ShowLoadingScreen("Construyendo nivel...");
+
+            LevelEnvironmentOptimizer.Apply();
             DeleteExtraObjects();
 
+            // Tras borrar duplicados del nivel, re-vincular la UI de MainScene (nunca la del nivel).
+            ui = FindMainSceneUI();
+
             buildManager = FindFirstObjectByType<BuildManager>();
-            buildManager.UpdateBuildManager(myWaveManager);
+            buildManager?.ClearBuildSelection();
+            buildManager?.UpdateBuildManager(myWaveManager);
 
             levelManager.UpdateCurrentGrid(myMainGrid);
 
             tileAnimator = FindFirstObjectByType<TileAnimator>();
             tileAnimator.ShowGrid(myMainGrid, true);
 
+            ui?.SetLoadingProgress(0.35f);
             yield return tileAnimator.GetCurrentActiveCo();
+            ui?.SetLoadingProgress(0.85f);
 
-            ui = FindFirstObjectByType<UI>();
-            ui.EnableInGameUI(true);
+            ui?.EnableInGameUI(true);
 
             gameManager = FindFirstObjectByType<GameManager>();
             gameManager.PrepareLevel(levelCurrency, myWaveManager, levelMaxHp);
 
-            // Solo el Nivel 1 muestra el tutorial automático la primera vez que el jugador juega.
-            if (showTutorialIfFirstTime)
-                gameManager.inGameUI.ShowTutorialIfFirstTime();
+            AudioManager.instance?.PlayLevelMusic();
 
-            // La transición desde menú puede dejar controles apagados hasta que termina el tween; al estar el nivel listo, activar zoom/pan.
+            if (showTutorialIfFirstTime)
+                gameManager.inGameUI?.ShowTutorialOnLevelStart();
+
             FindFirstObjectByType<CameraController>()?.EnableCameraConrolls(true);
+
+            ui?.SetLoadingProgress(1f);
+            ui?.HideLoadingScreen();
         }
 
         UnlockAvalibleTowers();
@@ -68,13 +81,51 @@ public class LevelSetup : MonoBehaviour
     {
         foreach (var obj in extraObjectsToDelete)
         {
-             Destroy(obj);
+            if (obj == null) continue;
+            Destroy(obj);
         }
+
+        DestroyDuplicateUICanvases();
+    }
+
+    private static void DestroyDuplicateUICanvases()
+    {
+        Scene mainScene = SceneManager.GetSceneByName("MainScene");
+        UI[] allUi = Object.FindObjectsByType<UI>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+
+        foreach (UI levelUi in allUi)
+        {
+            if (levelUi == null)
+                continue;
+
+            if (mainScene.IsValid() && levelUi.gameObject.scene == mainScene)
+                continue;
+
+            Destroy(levelUi.gameObject);
+        }
+    }
+
+    private static UI FindMainSceneUI()
+    {
+        Scene mainScene = SceneManager.GetSceneByName("MainScene");
+        if (!mainScene.IsValid())
+            return FindFirstObjectByType<UI>(FindObjectsInactive.Include);
+
+        foreach (GameObject root in mainScene.GetRootGameObjects())
+        {
+            UI found = root.GetComponentInChildren<UI>(true);
+            if (found != null)
+                return found;
+        }
+
+        return null;
     }
 
     private void UnlockAvalibleTowers()
     {
-        UI ui = FindFirstObjectByType<UI>();
+        UI ui = FindMainSceneUI();
+        if (ui == null || ui.buildButtonsUI == null)
+            return;
 
         foreach (var unlockData in towerUnlocks)
         {

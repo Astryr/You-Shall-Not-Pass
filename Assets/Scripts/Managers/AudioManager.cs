@@ -13,11 +13,18 @@ public class AudioManager : MonoBehaviour
     private void Awake()
     {
         if (instance == null)
+        {
             instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
         else
-            Destroy(this.gameObject);
+        {
+            Destroy(gameObject);
+            return;
+        }
 
-        InvokeRepeating(nameof(PlayMusicIfNeeded), 0, 2);
+        if (playBgm)
+            PlayMenuMusic();
     }
 
 
@@ -36,20 +43,17 @@ public class AudioManager : MonoBehaviour
         audioToPlay.Play();
     }
 
-    private void PlayMusicIfNeeded()
+    public void PlayMenuMusic()
     {
-        if (bgm.Length <= 0)
-        {
+        if (!playBgm || bgm.Length <= 0) return;
+        PlayBGM(0);
+    }
 
-            Debug.Log("You trying to play music, but you did not assign any!");
-            return;
-        }
-
-        if (playBgm == false)
-            return;
-
-        if (bgm[currentBgmIndex].isPlaying == false)
-            PlayRandomBGM();
+    public void PlayLevelMusic()
+    {
+        if (!playBgm || bgm.Length <= 0) return;
+        int index = bgm.Length > 1 ? 1 : 0;
+        PlayBGM(index);
     }
 
     [ContextMenu("Play Random Music")]

@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 0}
+  m_Sun: {fileID: 410087040}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -5150,7 +5150,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b682faa6d6b15284dbf21c5058f3459e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  playBgm: 0
+  playBgm: 1
   bgm:
   - {fileID: 1918134243}
   - {fileID: 952800595}
@@ -6870,7 +6870,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_MatchWidthOrHeight
-      value: 0.5
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
@@ -6880,7 +6880,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_ReferenceResolution.y
-      value: 1600
+      value: 1612
       objectReference: {fileID: 0}
     - target: {fileID: 8359895088375685056, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}

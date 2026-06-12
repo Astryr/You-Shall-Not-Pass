@@ -19,13 +19,13 @@ public class MobileCanvasFixer
 
             Undo.RecordObject(scaler, "Ajustar Escalado de Canvas");
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(720, 1600); // Resolución del TCL 408
+            scaler.referenceResolution = new Vector2(720, 1612);
             scaler.screenMatchMode = CanvasScaler.ScreenMatchMode.MatchWidthOrHeight;
-            scaler.matchWidthOrHeight = 0.5f; // Balance perfecto entre ancho y alto
+            scaler.matchWidthOrHeight = 0.7f;
             EditorUtility.SetDirty(scaler);
             count++;
         }
         
-        Debug.Log($"Se han ajustado {count} Canvas Scalers para el dispositivo móvil (Resolución: 720x1600).");
+        Debug.Log($"Se han ajustado {count} Canvas Scalers para landscape móvil (720x1612, match 0.7).");
     }
 }

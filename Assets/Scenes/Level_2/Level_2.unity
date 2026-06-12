@@ -16438,7 +16438,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_MatchWidthOrHeight
-      value: 0.5
+      value: 0.7
       objectReference: {fileID: 0}
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
@@ -16448,7 +16448,7 @@ PrefabInstance:
     - target: {fileID: 8238297042808479964, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
       propertyPath: m_ReferenceResolution.y
-      value: 1600
+      value: 1612
       objectReference: {fileID: 0}
     - target: {fileID: 8447145706540659119, guid: eb3918318c15e3c42a59f619a86c42d5,
         type: 3}
