@@ -128,7 +128,11 @@ public class Enemy : MonoBehaviour, IDamagable
         }
     }
                                     
-    public void SlowEnemy(float slowMultiplier,float duration) => StartCoroutine(SlowEnemyCo(slowMultiplier, duration));
+    public void SlowEnemy(float slowMultiplier, float duration)
+    {
+        if (!isActiveAndEnabled) return;
+        StartCoroutine(SlowEnemyCo(slowMultiplier, duration));
+    }
     private IEnumerator SlowEnemyCo(float slowMultiplier, float duration)
     {
         agent.speed = originalSpeed;

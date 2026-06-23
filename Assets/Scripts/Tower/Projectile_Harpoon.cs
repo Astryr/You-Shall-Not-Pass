@@ -17,6 +17,13 @@ public class Projectile_Harpoon : MonoBehaviour
         if (enemy == null || isAttached)
             return;
 
+        // Enemigo murió/volvió al pool mientras el proyectil viajaba.
+        if (!enemy.gameObject.activeInHierarchy)
+        {
+            tower?.ResetAttack();
+            return;
+        }
+
         MoveTowardsEnemy();
 
         if (Vector3.Distance(transform.position, enemy.transform.position) < .35f)
@@ -34,6 +41,12 @@ public class Projectile_Harpoon : MonoBehaviour
 
     private void AttachToEnemy()
     {
+        if (enemy == null || !enemy.gameObject.activeInHierarchy)
+        {
+            tower?.ResetAttack();
+            return;
+        }
+
         isAttached = true;
         transform.parent = enemy.transform;
         tower.ActivateAttack();

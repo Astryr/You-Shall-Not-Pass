@@ -49,7 +49,15 @@ public class Tower_Harpoon : Tower
     public void ActivateAttack()
     {
         reachedTarget = true;
-        Enemy_Flying flyingEnemy = currentEnemy?.GetComponent<Enemy_Flying>();
+
+        // El enemigo puede haber muerto entre el disparo y el impacto.
+        if (currentEnemy == null || !currentEnemy.gameObject.activeInHierarchy)
+        {
+            ResetAttack();
+            return;
+        }
+
+        Enemy_Flying flyingEnemy = currentEnemy.GetComponent<Enemy_Flying>();
         flyingEnemy?.AddObservingTower(this);
         currentEnemy.SlowEnemy(slowEffect, overTimeEffectDuration);
         harpoonVisuals.CreateElectrifyVFX(currentEnemy.transform);

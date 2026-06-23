@@ -1,10 +1,20 @@
 # GDD - You Shall Not Pass!
 
-**Versión:** 1.2 (pre-entrega final)  
+**Versión:** 1.2 (entrega final)  
 **Fecha:** 23/06/2026  
-**Equipo:** Herrera Oriana, Muiños Guadalupe, Lima Thiago, Jorge Santino  
 **Plataforma:** Android (dispositivo de referencia: TCL 408, 720x1600)  
 **Motor:** Unity 3D + Universal Render Pipeline (URP)
+
+---
+
+## Integrantes del equipo
+
+| Nombre | Rol |
+|--------|-----|
+| Herrera Oriana | Diseño y programación |
+| Muiños Guadalupe | Diseño y programación |
+| Lima Thiago | Programación |
+| Jorge Santino | Programación |
 
 ---
 
@@ -26,7 +36,7 @@ Tower defense post-apocalíptico. El jugador defiende el castillo (Núcleo) cont
 ## 3. Controles
 
 | Acción | PC | Móvil |
-|--------|-----|-------|
+|--------|----|-------|
 | Mover cámara | WASD / clic central | Un dedo |
 | Zoom | Rueda del mouse | Pinch (dos dedos) |
 | Construir torre | Clic en casilla | Tocar casilla |
@@ -79,6 +89,8 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 - Los materiales del terreno permanecen en modo **Lit** (URP Lit Shader) porque garantizan mejor calidad visual con la luz direccional única.
 - Bloom activo (efecto visual limitado con URP Performant).
 - Texturas UI/3D comprimidas ETC2; atlas de iconos de torretas.
+- Distancia de sombras reducida a 15m en Android (`QualitySettings.shadowDistance`).
+- LOD bias 0.7 en Android para activar modelos de baja poli antes (`QualitySettings.lodBias`).
 
 ### Código y runtime
 - **Object Pooling** para enemigos, proyectiles y VFX (`ObjectPoolManager`).
@@ -86,16 +98,22 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 - Raycasts de enemigos limitados a cada N frames.
 - `FindObjectOfType` cacheado donde impacta (oleadas, build slots).
 - Cancelación de `InvokeRepeating` en objetos pooled.
+- Solver de física reducido de 6 a 4 iteraciones (`Physics.defaultSolverIterations`).
+- `targetFrameRate = 90` con `vSyncCount = 0` para permitir exceder 60fps y evitar throttling.
+- `SustainedPerformanceMode` activo en Android para rendimiento estable en partidas largas.
 
 ### Build Android
 - IL2CPP, ARM64, OpenGL ES 3, minify release.
 - Proyecto en ruta ASCII: `C:\Proyectos\You-Shall-Not-Pass`.
 - Package: `com.Astryr.YouShallNotPass`.
+- Min SDK 25 (Android 7.1) / Target SDK 34 (Android 14).
 
 ### UI
 - Canvas Scaler configurado por escena (reference resolution de los prefabs de Canvas en el proyecto).
 - Pantalla de carga durante build del nivel.
 - Rotación bloqueada en **landscape** (`ProjectSettings` + `MobileBootstrap`): `allowedAutorotateToPortrait: 0`, `allowedAutorotateToLandscapeRight: 1`, `allowedAutorotateToLandscapeLeft: 1`.
+- Contador de FPS persistente (centro-derecha de pantalla) con código de color: verde ≥60, amarillo 45-59, rojo <45.
+- Nombres del equipo visibles en la sección Credits del menú principal.
 
 ---
 
@@ -108,9 +126,9 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 | `GameManager.cs` | Economía, Threat, victoria/derrota |
 | `LevelEnvironmentOptimizer.cs` | Optimización de luces (deshabilita puntuales/spot, conserva direccional) |
 | `UI_LoadingScreen.cs` | Pantalla de carga |
-| `MobileBootstrap.cs` | Ajustes Android al iniciar |
-| `AudioManager.cs` | Música y efectos |
-| `AndroidOptimizer.cs` | Optimización de assets en editor |
+| `MobileBootstrap.cs` | Ajustes Android al iniciar (FPS, orientación, física, calidad) |
+| `AudioManager.cs` | Música y efectos de sonido |
+| `FPSCounter.cs` | Contador de FPS persistente en pantalla |
 
 ---
 
@@ -118,19 +136,19 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 
 | Fecha / fase | Hitos |
 |--------------|-------|
-| Preproducción | Concepto, roles, game loop, elección Unity mobile |
-| Prototipo | Grilla, torretas, enemigos básicos, economía |
-| Core gameplay | Oleadas, castillo/Threat, 3 niveles, FORCE WAVE |
-| Balance | Vida de enemigos, recompensas, currency por nivel |
-| Optimización v1 | Pooling, URP Performant, AndroidOptimizer, build APK |
-| Corrección docente (27/05) | Pantalla de carga, audio activo, landscape lock, tutorial Nivel 1, luces optimizadas, GDD actualizado |
-| Pre-entrega (23/06) | Auditoría completa: null-checks en GameManager/LevelSetup/UI, fixes en SelfRemoveToPool/Waypoint/TowerPreview/RadiusDisplay/Tower_Harpoon, optimización audio Android (ADPCM + loadInBackground), GDD v1.2 |
+| Preproducción | Concepto, roles, game loop, elección Unity + URP mobile |
+| Prototipo | Grilla de tiles, torretas básicas, enemigos, economía |
+| Core gameplay | Sistema de oleadas (`WaveManager`), castillo/Threat, 3 niveles, botón FORCE WAVE |
+| Balance | Ajuste de vida de enemigos, recompensas y currency por nivel |
+| Optimización v1 | Object pooling (`ObjectPoolManager`), URP Performant, `AndroidOptimizer`, build APK inicial |
+| Corrección docente (27/05) | Pantalla de carga (`UI_LoadingScreen`), música y SFX activos (`AudioManager`), orientación landscape bloqueada, tutorial en Nivel 1, optimización de luces con `LevelEnvironmentOptimizer`, GDD v1.1 |
+| Entrega final (23/06) | Auditoría completa de 80 scripts; null-checks críticos en `GameManager`, `LevelSetup`, `UI_Pause`, `TowerPreview`, `RadiusDisplay`, `Tower_Harpoon`, `Waypoint`, `SelfRemoveToPool`; fix race condition arpón vs. pool de enemigos (`Projectile_Harpoon` + `Enemy.SlowEnemy`); optimización audio Android (ADPCM + Vorbis streaming + `loadInBackground`); contador FPS persistente (`FPSCounter`); `targetFrameRate = 90` + reducción de solver de física y sombras; GDD v1.2 |
 
 ---
 
 ## 10. Entregables
 
-- APK Android (build release)
+- APK Android (build release) — enlace Google Drive: *(completar al subir)*
 - Proyecto Unity: `C:\Proyectos\You-Shall-Not-Pass`
 - Repositorio: `github.com/Astryr/You-Shall-Not-Pass`
 - Este GDD (`Docs/GDD_You_Shall_Not_Pass.md`)
