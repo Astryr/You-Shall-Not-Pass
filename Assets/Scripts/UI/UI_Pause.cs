@@ -11,13 +11,13 @@ public class UI_Pause : MonoBehaviour
 
     private void Awake()
     {
-        ui = GetComponentInParent<UI>();
-        inGameUI = ui.GetComponentInChildren<UI_InGame>(true);
+        ui = GetComponentInParent<UI>(true);
+        inGameUI = ui?.GetComponentInChildren<UI_InGame>(true);
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.F10))
+        if (Input.GetKeyDown(KeyCode.F10) && ui != null && inGameUI != null)
             ui.SwitchTo(inGameUI.gameObject);
     }
 

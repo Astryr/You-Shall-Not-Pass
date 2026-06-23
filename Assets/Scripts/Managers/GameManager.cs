@@ -40,9 +40,8 @@ public class GameManager : MonoBehaviour
             currentHp += 9999;
         }
 
-
-        inGameUI.UpdateHealthPointsUI(currentHp, maxHp);
-        inGameUI.UpdateCurrencyUI(currency);
+        inGameUI?.UpdateHealthPointsUI(currentHp, maxHp);
+        inGameUI?.UpdateCurrencyUI(currency);
     }
 
     public bool IsTestingLevel() => levelManager == null;
@@ -58,7 +57,7 @@ public class GameManager : MonoBehaviour
         if (cameraEffects != null)
             yield return cameraEffects.GetActiveCamCo();
 
-        inGameUI.EnableGameOverUI(true);
+        inGameUI?.EnableGameOverUI(true);
     }
 
     public void LevelCompleted() => StartCoroutine(LevelCompletedCo());
@@ -94,14 +93,17 @@ public class GameManager : MonoBehaviour
         gameLost = false;
         enemiesKilled = 0;
 
+        if (inGameUI == null)
+            inGameUI = FindFirstObjectByType<UI_InGame>(FindObjectsInactive.Include);
+
         currentActiveWaveManager = newWaveManager;
         currency = levelCurrency;
         maxHp    = levelMaxHp;
         currentHp = maxHp;
 
-        inGameUI.UpdateHealthPointsUI(currentHp, maxHp);
-        inGameUI.UpdateCurrencyUI(currency);
-        inGameUI.SetWaveManager(newWaveManager);
+        inGameUI?.UpdateHealthPointsUI(currentHp, maxHp);
+        inGameUI?.UpdateCurrencyUI(currency);
+        inGameUI?.SetWaveManager(newWaveManager);
 
         newWaveManager.ActivateWaveManager();
     }
@@ -109,8 +111,8 @@ public class GameManager : MonoBehaviour
     public void UpdateHp(int value)
     {
         currentHp += value;
-        inGameUI.UpdateHealthPointsUI(currentHp, maxHp);
-        inGameUI.ShakeHealthUI();
+        inGameUI?.UpdateHealthPointsUI(currentHp, maxHp);
+        inGameUI?.ShakeHealthUI();
 
         if (currentHp <= 0 && gameLost == false)
             StartCoroutine(LevelFailedCo());

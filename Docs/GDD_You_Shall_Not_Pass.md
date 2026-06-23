@@ -1,7 +1,7 @@
 # GDD - You Shall Not Pass!
 
-**Versión:** 1.1 (post-corrección)  
-**Fecha:** 27/05/2026  
+**Versión:** 1.2 (pre-entrega final)  
+**Fecha:** 23/06/2026  
 **Equipo:** Herrera Oriana, Muiños Guadalupe, Lima Thiago, Jorge Santino  
 **Plataforma:** Android (dispositivo de referencia: TCL 408, 720x1600)  
 **Motor:** Unity 3D + Universal Render Pipeline (URP)
@@ -46,7 +46,7 @@ Tower defense post-apocalíptico. El jugador defiende el castillo (Núcleo) cont
 | SFX UI | Hover y click en botones |
 | SFX combate | Disparos de torretas vía `AudioManager.PlaySFX` |
 | Ajustes | Sliders de BGM y SFX en menú de opciones (AudioMixer) |
-| Compresión Android | BGM en streaming (Vorbis); SFX cortos comprimidos y mono |
+| Compresión Android | BGM: Vorbis streaming + `loadInBackground: 1` (no bloquea hilo principal); SFX cortos: ADPCM + `preloadAudioData: 1` (respuesta inmediata); SFX largos: Vorbis + `preloadAudioData: 1`; todos los SFX en mono |
 
 ---
 
@@ -74,10 +74,10 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 
 ### Gráficos
 - Perfil URP **Performant** en Android; render scale 0.85.
-- Sin luces dinámicas en niveles: se desactivan y el terreno usa materiales **Unlit** (sin depender de iluminación).
-- `LevelEnvironmentOptimizer` aplica cambios al cargar cada nivel.
-- Herramienta de editor: `Tools → Android Optimizer → 7. Convert Tile Materials to Unlit`.
-- Bloom desactivado en Android (`MobileBootstrap`).
+- Luces en niveles: se conserva **una sola luz direccional** (la más intensa del nivel) para mantener la calidad visual, y se desactivan las luces puntuales/spot que son costosas en rendimiento.
+- `LevelEnvironmentOptimizer` aplica cambios al cargar cada nivel (`DisableExpensiveLights`, `ConfigureMainDirectionalLight`).
+- Los materiales del terreno permanecen en modo **Lit** (URP Lit Shader) porque garantizan mejor calidad visual con la luz direccional única.
+- Bloom activo (efecto visual limitado con URP Performant).
 - Texturas UI/3D comprimidas ETC2; atlas de iconos de torretas.
 
 ### Código y runtime
@@ -93,9 +93,9 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 - Package: `com.Astryr.YouShallNotPass`.
 
 ### UI
-- Canvas Scaler a 1600x720 (landscape, TCL 408).
+- Canvas Scaler configurado por escena (reference resolution de los prefabs de Canvas en el proyecto).
 - Pantalla de carga durante build del nivel.
-- Rotación bloqueada en landscape.
+- Rotación bloqueada en **landscape** (`ProjectSettings` + `MobileBootstrap`): `allowedAutorotateToPortrait: 0`, `allowedAutorotateToLandscapeRight: 1`, `allowedAutorotateToLandscapeLeft: 1`.
 
 ---
 
@@ -106,7 +106,7 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 | `ObjectPoolManager.cs` | Reutilización de enemigos y proyectiles |
 | `WaveManager.cs` | Oleadas manuales y spawn |
 | `GameManager.cs` | Economía, Threat, victoria/derrota |
-| `LevelEnvironmentOptimizer.cs` | Sin luces dinámicas + materiales unlit |
+| `LevelEnvironmentOptimizer.cs` | Optimización de luces (deshabilita puntuales/spot, conserva direccional) |
 | `UI_LoadingScreen.cs` | Pantalla de carga |
 | `MobileBootstrap.cs` | Ajustes Android al iniciar |
 | `AudioManager.cs` | Música y efectos |
@@ -123,7 +123,8 @@ Scripts: `UI_LoadingScreen`, `LevelManager`, `LevelSetup`.
 | Core gameplay | Oleadas, castillo/Threat, 3 niveles, FORCE WAVE |
 | Balance | Vida de enemigos, recompensas, currency por nivel |
 | Optimización v1 | Pooling, URP Performant, AndroidOptimizer, build APK |
-| Corrección docente (27/05) | Pantalla de carga, audio activo, portrait lock, tutorial Nivel 1, luces off + unlit, GDD actualizado |
+| Corrección docente (27/05) | Pantalla de carga, audio activo, landscape lock, tutorial Nivel 1, luces optimizadas, GDD actualizado |
+| Pre-entrega (23/06) | Auditoría completa: null-checks en GameManager/LevelSetup/UI, fixes en SelfRemoveToPool/Waypoint/TowerPreview/RadiusDisplay/Tower_Harpoon, optimización audio Android (ADPCM + loadInBackground), GDD v1.2 |
 
 ---
 

@@ -7,6 +7,7 @@ public class Waypoint : MonoBehaviour
     // we need this script to to detect waypoints
     private void Awake()
     {
-        GetComponent<MeshRenderer>().enabled = false;
+        MeshRenderer mr = GetComponent<MeshRenderer>();
+        if (mr != null) mr.enabled = false;
     }
 }

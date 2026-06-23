@@ -11,18 +11,19 @@ public class SelfRemoveToPool : MonoBehaviour
 
     private void Awake()
     {
-        objectPool = ObjectPoolManager.instance;
         particle = GetComponentInChildren<ParticleSystem>();
     }
 
     private void OnEnable()
     {
+        if (objectPool == null)
+            objectPool = ObjectPoolManager.instance;
+
         if (particle != null)
         {
             particle.Clear();
             particle.Play();
         }
-
 
         StartCoroutine(RemoveWithDelayCo());
     }
@@ -30,6 +31,9 @@ public class SelfRemoveToPool : MonoBehaviour
     private IEnumerator RemoveWithDelayCo()
     {
         yield return new WaitForSeconds(removeDelay);
-        objectPool.Remove(gameObject);
+        if (objectPool != null)
+            objectPool.Remove(gameObject);
+        else
+            gameObject.SetActive(false);
     }
 }

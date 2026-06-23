@@ -45,6 +45,12 @@ public class LevelSetup : MonoBehaviour
             levelManager.UpdateCurrentGrid(myMainGrid);
 
             tileAnimator = FindFirstObjectByType<TileAnimator>();
+            if (tileAnimator == null)
+            {
+                Debug.LogError("[LevelSetup] No se encontró TileAnimator en la escena.");
+                yield break;
+            }
+
             tileAnimator.ShowGrid(myMainGrid, true);
 
             ui?.SetLoadingProgress(0.35f);
@@ -54,6 +60,12 @@ public class LevelSetup : MonoBehaviour
             ui?.EnableInGameUI(true);
 
             gameManager = FindFirstObjectByType<GameManager>();
+            if (gameManager == null)
+            {
+                Debug.LogError("[LevelSetup] No se encontró GameManager en la escena.");
+                yield break;
+            }
+
             gameManager.PrepareLevel(levelCurrency, myWaveManager, levelMaxHp);
 
             AudioManager.instance?.PlayLevelMusic();

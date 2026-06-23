@@ -49,7 +49,8 @@ public class Tower_Harpoon : Tower
     public void ActivateAttack()
     {
         reachedTarget = true;
-        currentEnemy.GetComponent<Enemy_Flying>().AddObservingTower(this);
+        Enemy_Flying flyingEnemy = currentEnemy?.GetComponent<Enemy_Flying>();
+        flyingEnemy?.AddObservingTower(this);
         currentEnemy.SlowEnemy(slowEffect, overTimeEffectDuration);
         harpoonVisuals.CreateElectrifyVFX(currentEnemy.transform);
 

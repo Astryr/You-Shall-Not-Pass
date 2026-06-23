@@ -68,11 +68,14 @@ public class TowerPreview : MonoBehaviour
     }
     private void MakeAllMeshTransperent()
     {
-        Material previewMat = FindFirstObjectByType<BuildManager>().GetBuildPreviewMat();
+        BuildManager bm = FindFirstObjectByType<BuildManager>();
+        if (bm == null) return;
 
+        Material previewMat = bm.GetBuildPreviewMat();
         foreach (var mesh in meshRenderers)
         {
-            mesh.material = previewMat;
+            if (mesh != null)
+                mesh.material = previewMat;
         }
     }
 }
