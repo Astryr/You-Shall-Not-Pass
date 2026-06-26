@@ -5,9 +5,13 @@ using UnityEngine.EventSystems;
 
 public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler, IPointerDownHandler
 {
-    private UI ui;
-    private TileAnimator tileAnim;
-    private BuildManager buildManager;
+    // Singletons: resueltos en O(1) sin FindFirstObjectByType.
+    // Esto elimina ~150 búsquedas durante la activación de la escena
+    // (antes era 3 FindFirstObjectByType por slot × N slots en el nivel).
+    private UI ui => UI.instance;
+    private TileAnimator tileAnim => TileAnimator.instance;
+    private BuildManager buildManager => BuildManager.instance;
+
     private Vector3 defaultPosition;
 
     private bool tileCanBeMoved = true;
@@ -16,13 +20,9 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
     private Coroutine currentMovementUpCo;
     private Coroutine moveToDefaultCo;
 
-    
-
     private void Awake()
     {
-        ui = FindFirstObjectByType<UI>();
-        tileAnim = FindFirstObjectByType<TileAnimator>();
-        buildManager = FindFirstObjectByType<BuildManager>();
+        // Solo cacheamos la posición inicial. Sin búsquedas de objetos.
         defaultPosition = transform.position;
     }
 

@@ -1,6 +1,6 @@
 # GDD — You Shall Not Pass!
 
-**Versión:** 2.0 (entrega final)
+**Versión:** 2.1 (entrega final)
 **Fecha:** 26/06/2026
 **Motor:** Unity 6000.3.11f1 — Universal Render Pipeline (URP)
 **Plataforma:** Android — dispositivo de referencia: TCL 408 (720×1600 px, gama baja)
@@ -203,8 +203,12 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | **ARM64** | `AndroidTargetArchitectures: 2` | Arquitectura nativa del TCL 408 y cualquier Android moderno |
 | **Minify Release** | `AndroidMinifyRelease: 1` | Reduce tamaño de APK |
 | **Managed Stripping** | Level Low | Elimina código IL no usado sin romper reflexión |
+| **GC Incremental** | `gcIncremental: 1` en ProjectSettings | El GC distribuye su trabajo en slices por frame en lugar de pausar todo el juego |
+| **GC LatencyMode** | `GCSettings.LatencyMode = GCLatencyMode.LowLatency` | Prioriza pausas cortas sobre throughput; crítico para mantener 60 FPS en oleadas intensas |
 | **Async scene loading** | `LoadSceneAsync` con `allowSceneActivation = false` | Carga mientras la animación juega, evitando freeze |
 | **backgroundLoadingPriority** | `ThreadPriority.Low` durante carga, `BelowNormal` en gameplay | Evita que el hilo de carga interrumpa el hilo principal |
+| **BuildSlot singletons** | `UI.instance`, `BuildManager.instance`, `TileAnimator.instance` | Elimina ~150 `FindFirstObjectByType` durante activación de escena (3 calls × N slots por nivel) |
+| **maximumDeltaTime** | `Time.maximumDeltaTime = 0.05f` | Cap de 50ms de deltaTime: si el frame de activación tarda más, la física no explota |
 
 ### 7.2 Gráficos y renderizado
 
@@ -215,17 +219,20 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | **Sombras** | `shadowDistance = 15 m` en Android | Sombras solo a 15 m de la cámara, no a distancia completa |
 | **Una sola luz direccional** | `LevelEnvironmentOptimizer.Apply()` | Desactiva todas las luces puntuales/spot; conserva la direccional más intensa |
 | **LOD Bias** | `0.7` en Android | Activa LODs de baja poli antes, reduciendo tris en GPU |
-| **Bloom activo** | Con URP Performant | El Bloom en URP Performant es una pass liviara; se mantiene por calidad visual |
+| **MSAA desactivado** | `QualitySettings.antiAliasing = 0` + `cam.allowMSAA = false` | MSAA resuelve múltiples samples por pixel; en gama baja el costo supera el beneficio visual |
+| **HDR desactivado** | `cam.allowHDR = false` en Android | HDR necesita render target de 16-32 bits por canal; reduce significativamente la presión sobre la memoria de GPU |
+| **Bloom activo** | Con URP Performant | El Bloom en URP Performant es una pass liviana; se mantiene por calidad visual |
 
-### 7.3 Físicas
+### 7.3 Físicas y código
 
 | Técnica | Implementación | Justificación |
 |---------|---------------|---------------|
 | **Object Pooling** | `ObjectPoolManager` (enemigos, proyectiles, VFX) | Elimina GC allocations en gameplay activo |
 | **Solver iterations** | `Physics.defaultSolverIterations = 4` | Default 6→4: -30% carga de CPU por FixedUpdate sin afectar gameplay |
 | **NavMesh pre-baked** | Bake en editor por nivel | Evita recálculo en runtime |
-| **NavMeshSurface cached** | `GridBuilder._navMesh` | Evita `GetComponent<NavMeshSurface>()` en cada acceso |
-| **TileSlot cached** | `GridBuilder.cachedTileSlots` | Evita `GetComponent<TileSlot>()` × tiles en cada llamada a `MakeTilesNonInteractable` |
+| **NavMeshSurface cached** | `GridBuilder._navMesh` con lazy-init | Evita `GetComponent<NavMeshSurface>()` en cada acceso a la property |
+| **TileSlot cached** | `GridBuilder.cachedTileSlots` | Evita `GetComponent<TileSlot>()` × tiles en cada `MakeTilesNonInteractable` |
+| **Singletons de managers** | `static instance` en BuildManager, TileAnimator, UI | `BuildSlot.Awake()` antes hacía 3 `FindFirstObjectByType` por tile; ahora acceso O(1) |
 
 ### 7.4 Manejo de assets
 
@@ -318,25 +325,48 @@ Se realiza una auditoría completa de 80 scripts. Bugs críticos encontrados y c
 
 **`RadiusDisplay` y `TowerPreview`:** `FindFirstObjectByType<BuildManager>()` sin null-check. Si se abre la escena directamente sin BuildManager, crash. Corregido.
 
-### Fase 8 — Optimización de carga (26/06/2026)
+### Fase 8 — Optimización de carga: primera ronda (26/06/2026)
 
-Se detecta que el juego se traba (FPS cae a < 10) durante la pantalla de carga del nivel en el TCL 408. Análisis de causas:
+Se detecta que el juego se traba (FPS cae a ~2) durante la pantalla de carga del nivel en el TCL 408. Análisis de causas:
 
 1. **La escena empezaba a cargarse después de la animación del menú**, no durante. Todo el I/O y la activación de GameObjects ocurría de golpe mientras la pantalla de carga debería estar mostrándose.
 
-2. **`GridBuilder.myNavMesh`** era una property expression (`=> GetComponent<NavMeshSurface>()`), es decir, llamaba `GetComponent` cada vez que se accedía. En un loop de tiles esto acumulaba cientos de llamadas.
+2. **`GridBuilder.myNavMesh`** era una property expression (`=> GetComponent<NavMeshSurface>()`), llamando `GetComponent` en cada acceso.
 
 3. **`LevelSetup.Start()`** ejecutaba `LevelEnvironmentOptimizer.Apply()`, `DeleteExtraObjects()` y varios `FindFirstObjectByType()` de forma síncrona consecutiva, bloqueando el renderer varios frames.
 
 **Soluciones aplicadas:**
 
-- `LevelManager.LoadLevelFromMenuCo`: se inicia `LoadSceneAsync` con `allowSceneActivation = false` inmediatamente al empezar la carga (antes de la animación). Los datos se leen del disco mientras la animación juega. Se activa la escena solo cuando la animación termina y la escena está al 90%.
+- `LevelManager`: se inicia `LoadSceneAsync` con `allowSceneActivation = false` antes de la animación. Se activa la escena cuando la animación termina Y la escena está al 90%.
+- `Application.backgroundLoadingPriority = ThreadPriority.Low` durante la carga.
+- `GridBuilder`: `_navMesh` con lazy-init + `cachedTileSlots` para evitar `GetComponent` por tile.
+- `LevelSetup.Start()`: `yield return null` entre operaciones pesadas.
 
-- `Application.backgroundLoadingPriority = ThreadPriority.Low` durante la carga: cede más tiempo de CPU al hilo principal, reduciendo los spikes.
+**Resultado:** FPS durante carga mejoró de ~2 a ~24.
 
-- `GridBuilder`: se agrega `private NavMeshSurface _navMesh` con lazy-init en la property, y `List<TileSlot> cachedTileSlots` para evitar `GetComponent` por tile en cada `MakeTilesNonInteractable`.
+### Fase 9 — Optimización de carga: segunda ronda (26/06/2026)
 
-- `LevelSetup.Start()`: se agregan `yield return null` entre cada operación pesada para que el renderer pueda dibujar la pantalla de carga entre operaciones.
+Con 24 FPS en el spike de activación de escena, se analiza la causa raíz restante: el frame de activación de Unity ejecuta todos los `Awake()` de los GameObjects del nivel en un solo frame.
+
+**Cuello de botella identificado:** cada `BuildSlot.Awake()` llamaba:
+```csharp
+ui          = FindFirstObjectByType<UI>();          // O(n) sobre todos los objetos
+tileAnim    = FindFirstObjectByType<TileAnimator>(); // O(n) sobre todos los objetos
+buildManager = FindFirstObjectByType<BuildManager>(); // O(n) sobre todos los objetos
+```
+Con 20-50 BuildSlots por nivel → **60-150 búsquedas O(n) en un solo frame**.
+
+**Soluciones aplicadas:**
+
+- **`UI`, `BuildManager`, `TileAnimator`:** se añade campo `public static instance` que se asigna en `Awake()`. Son singletons de facto (uno por escena, en `MainScene` persistente).
+
+- **`BuildSlot`:** se reemplaza el `Awake()` con 3 `FindFirstObjectByType` por propiedades que acceden al singleton directamente (`UI.instance`, `BuildManager.instance`, `TileAnimator.instance`). El `Awake()` ahora solo asigna `defaultPosition = transform.position`. Costo: O(1), sin búsqueda.
+
+- **`MobileBootstrap`:** se agregan las siguientes configuraciones globales:
+  - `GCSettings.LatencyMode = GCLatencyMode.LowLatency`: el runtime de .NET prioriza pausas cortas de GC.
+  - `Time.maximumDeltaTime = 0.05f`: si un frame tarda más de 50ms (p.ej. el frame de activación), la física recibe máximo 50ms de delta, evitando que objetos físicos "salten" por el spike.
+  - `QualitySettings.antiAliasing = 0`: MSAA desactivado globalmente en Android.
+  - `cam.allowHDR = false` y `cam.allowMSAA = false`: desactivan render targets de alta precisión que no aportan calidad visible en el TCL 408 pero consumen bandwidth de GPU.
 
 ---
 

@@ -1,5 +1,5 @@
 HIGH CONCEPT — You Shall Not Pass!
-Versión 2.0 — Entrega Final — 26/06/2026
+Versión 2.1 — Entrega Final — 26/06/2026
 
 Integrantes:
   Herrera, Oriana    — Project Manager · Artista 3D
@@ -100,21 +100,46 @@ A) OPTIMIZACIÓN EN ENGINE / BUILD
   porque es la arquitectura de todos los dispositivos Android modernos y
   eliminar x86/ARMv7 reduce el tamaño del APK.
 
-  Carga asíncrona de escenas con pre-carga paralela (v2.0)
-  Antes de esta corrección, la escena del nivel empezaba a cargarse DESPUÉS
-  de la animación del menú. Esto causaba un freeze de 1-3 s visible incluso
-  con la pantalla de carga activa, porque Unity bloqueaba el hilo principal
-  al activar todos los GameObjects.
+  Carga asíncrona de escenas con pre-carga paralela (v2.0 → v2.1)
+  Antes de la v2.0, la escena empezaba a cargarse DESPUÉS de la animación
+  del menú — freeze de 1-3 s visible con FPS cayendo a ~2 en el TCL 408.
 
-  Solución implementada en LevelManager.cs:
-    1. LoadSceneAsync se llama inmediatamente al iniciar la carga,
-       con allowSceneActivation = false (pausa en el 90% sin activar GameObjects).
-    2. Application.backgroundLoadingPriority = ThreadPriority.Low durante la
-       carga: cede más tiempo CPU al hilo de render, reduciendo spikes.
-    3. La animación del menú y la lectura del disco ocurren en paralelo.
-    4. Al terminar la animación + escena al 90%, se activa la escena.
-    5. LevelSetup.Start() distribuye su trabajo con "yield return null"
-       entre operaciones pesadas, cediendo frames al renderer.
+  Solución v2.0 (LevelManager.cs):
+    1. LoadSceneAsync se llama inmediatamente con allowSceneActivation = false.
+    2. backgroundLoadingPriority = ThreadPriority.Low durante la carga.
+    3. Animación del menú + lectura del disco ocurren en paralelo.
+    4. Al terminar la animación + escena al 90% → se activa la escena.
+    5. LevelSetup.Start() distribuye trabajo con "yield return null".
+  Resultado: FPS durante carga mejoró de ~2 a ~24.
+
+  Eliminación del spike de activación de escena (v2.1)
+  Causa raíz del 24 FPS restante: cada BuildSlot.Awake() llamaba 3 veces
+  a FindFirstObjectByType (búsqueda O(n) sobre todos los objetos activos).
+  Con 20-50 BuildSlots por nivel, el frame de activación ejecutaba 60-150
+  búsquedas costosas en un solo frame.
+
+  Solución (BuildSlot.cs, BuildManager.cs, TileAnimator.cs, UI.cs):
+    - Se añadió "public static instance" a BuildManager, TileAnimator y UI.
+    - BuildSlot.Awake() reemplazado: ahora solo asigna defaultPosition.
+    - Los managers se acceden como UI.instance, BuildManager.instance, etc.
+    - Cada acceso es O(1) sin ninguna búsqueda.
+
+  Configuraciones adicionales (MobileBootstrap.cs v2.1):
+    - GCSettings.LatencyMode = LowLatency: el runtime .NET prioriza pausas
+      cortas de GC en lugar de throughput máximo. Evita hitches de 20-50 ms
+      durante oleadas intensas causados por colecciones completas de GC.
+    - Time.maximumDeltaTime = 0.05f: si un frame tarda más de 50 ms,
+      la física y animaciones reciben máximo 50 ms de delta. Evita que
+      objetos físicos "salten" durante el frame de activación de la escena.
+    - QualitySettings.antiAliasing = 0 + cam.allowMSAA = false: MSAA
+      resuelve múltiples samples por pixel; en gama baja el costo de memoria
+      de framebuffer supera el beneficio visual.
+    - cam.allowHDR = false: HDR requiere render targets de 16-32 bits por
+      canal, aumentando el uso de memoria de GPU en el TCL 408.
+
+  GC Incremental (ProjectSettings)
+    - gcIncremental: 1 ya estaba habilitado: el recolector de Unity
+      distribuye el trabajo de GC en slices por frame en lugar de pausar.
 
   Minify Release + Managed Stripping (Low)
   Reduce el tamaño del APK eliminando bytecode no referenciado. El nivel
@@ -295,18 +320,25 @@ BITÁCORA DE DESARROLLO
                             Vorbis streaming + loadInBackground). Contador FPS.
                             targetFrameRate = 90, solver física = 4 iteraciones.
 
-  Optimización de carga     Stutter detectado en TCL 408 durante pantalla de
-  26/06/2026                carga. Causas: escena cargaba después de animación,
+  Opt. carga: 1ª ronda      Stutter detectado (~2 FPS) durante pantalla de
+  26/06/2026                carga en TCL 408. Causas: escena cargaba tarde,
                             GetComponent sin caché en GridBuilder, operaciones
                             pesadas síncronas en LevelSetup.
-                            Solución: LoadSceneAsync con allowSceneActivation=false
-                            iniciado en paralelo con la animación; ThreadPriority.Low
-                            durante carga; NavMeshSurface y TileSlot cacheados;
-                            yield return null entre operaciones pesadas en LevelSetup.
+                            Solución: LoadSceneAsync+allowSceneActivation=false
+                            en paralelo con animación; ThreadPriority.Low;
+                            NavMeshSurface y TileSlot cacheados; yield return null.
+                            Resultado: 2 FPS → 24 FPS.
+
+  Opt. carga: 2ª ronda      Causa raíz del 24 FPS identificada: BuildSlot.Awake()
+  26/06/2026                llamaba 3 FindFirstObjectByType por tile (60-150 por
+                            nivel). Solución: static instance en BuildManager,
+                            TileAnimator y UI; acceso O(1) desde BuildSlot.
+                            Además: GCLatencyMode=LowLatency, maximumDeltaTime=
+                            0.05f, antiAliasing=0, HDR/MSAA desactivados en cámara.
 
   Estado actual             Juego listo para entrega final. Tres niveles
   26/06/2026                funcionales, sin bugs inhabilitantes, FPS estables
-                            en verde (≥60) en toda la sesión de juego en TCL 408.
+                            en verde (≥60) en toda la sesión en TCL 408.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

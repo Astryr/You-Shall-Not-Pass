@@ -6,6 +6,8 @@ using UnityEngine;
 
 public class TileAnimator : MonoBehaviour
 {
+    public static TileAnimator instance;
+
     [SerializeField] private float defaultMoveDuration = .1f;
 
     [Header("Build Slot Movement")]
@@ -25,6 +27,11 @@ public class TileAnimator : MonoBehaviour
     private Coroutine currentActiveCo;
     private bool isGridMoving;
 
+
+    private void Awake()
+    {
+        instance = this;
+    }
 
     private void Start()
     {

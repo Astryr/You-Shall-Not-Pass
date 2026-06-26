@@ -5,6 +5,8 @@ using UnityEngine.Serialization;
 // Mecánica principal de construcción: elige casilla (BuildSlot), confirma torre desde UI (UI_BuildButton) y esta clase instancia la torre si hay oro.
 public class BuildManager : MonoBehaviour
 {
+    public static BuildManager instance;
+
     private UI ui;
     public BuildSlot selectedBuildSlot;
 
@@ -31,6 +33,7 @@ public class BuildManager : MonoBehaviour
 
     private void Awake()
     {
+        instance = this;
         ui = FindFirstObjectByType<UI>();
         cameraEffects = FindFirstObjectByType<CameraEffects>();
 

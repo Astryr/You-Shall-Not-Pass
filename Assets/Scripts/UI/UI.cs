@@ -4,6 +4,8 @@ using UnityEngine.UI;
 
 public class UI : MonoBehaviour
 {
+    public static UI instance;
+
     [SerializeField] private Image fadeImageUI;
     [SerializeField] private GameObject[] uiElements;
 
@@ -24,6 +26,7 @@ public class UI : MonoBehaviour
 
     private void Awake()
     {
+        instance = this;
         buildButtonsUI = GetComponentInChildren<UI_BuildButtonsHolder>(true);
         settingsUI = GetComponentInChildren<UI_Settings>(true);
         mainMenuUI = GetComponentInChildren<UI_MainMenu>(true);

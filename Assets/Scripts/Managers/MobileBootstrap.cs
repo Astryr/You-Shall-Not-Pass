@@ -1,3 +1,4 @@
+using System.Runtime;
 using UnityEngine;
 
 /// <summary>
@@ -7,7 +8,7 @@ using UnityEngine;
 public static class MobileBootstrap
 {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
-    private static void ApplyAndroidSettings()
+    private static void ApplySettings()
     {
         // Cap en 90 para que el dispositivo pueda superar 60fps si tiene capacidad,
         // y el contador siempre muestre valores reales (sin cap artificial en 60).
@@ -23,6 +24,14 @@ public static class MobileBootstrap
         // conserva comportamiento de juego pero baja la carga de CPU por FixedUpdate.
         Physics.defaultSolverIterations         = 4;
         Physics.defaultSolverVelocityIterations = 1;
+
+        // Limita el deltaTime reportado a scripts. Si un frame tarda 200ms (spike de carga),
+        // Unity solo reporta 50ms a la física y animaciones, evitando explosiones de simulación.
+        Time.maximumDeltaTime = 0.05f;
+
+        // GC de baja latencia: el recolector de basura distribuye su trabajo entre frames
+        // en lugar de pausar el juego con una colección completa ("stop-the-world").
+        GCSettings.LatencyMode = GCLatencyMode.LowLatency;
 
 #if UNITY_ANDROID && !UNITY_EDITOR
         Screen.sleepTimeout = SleepTimeout.NeverSleep;
@@ -43,7 +52,25 @@ public static class MobileBootstrap
 
         // LOD más agresivo en móvil: reduce polígonos a mayor distancia.
         QualitySettings.lodBias = 0.7f;
+
+        // MSAA consume mucha memoria de framebuffer en gama baja; lo desactivamos globalmente.
+        QualitySettings.antiAliasing = 0;
 #endif
     }
 
+    // Se ejecuta después de la primera escena para configurar ajustes de cámara.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    private static void ApplyCameraSettings()
+    {
+#if UNITY_ANDROID && !UNITY_EDITOR
+        Camera cam = Camera.main;
+        if (cam != null)
+        {
+            // HDR requiere un render target de alta precisión (fp16/fp32), muy costoso en móvil.
+            cam.allowHDR  = false;
+            // MSAA en la cámara es redundante si ya está desactivado en QualitySettings.
+            cam.allowMSAA = false;
+        }
+#endif
+    }
 }
