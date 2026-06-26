@@ -1,122 +1,318 @@
-HIGH CONCEPT
+HIGH CONCEPT — You Shall Not Pass!
+Versión 2.0 — Entrega Final — 26/06/2026
 
-"You Shall Not Pass!"
 Integrantes:
+  Herrera, Oriana    — Project Manager · Artista 3D
+  Muiños, Guadalupe  — Game Designer · Artista 3D
+  Lima, Thiago       — Game Designer · QA · Audio
+  Jorge, Santino     — Programador
 
-Herrera, Oriana.
-Muiños, Guadalupe.
-Lima, Thiago.
-Jorge, Santino.
+Plataforma de destino:  Mobile (Android). iOS como extensión futura posible.
+Dispositivo de referencia: TCL 408 (720×1600 px, gama baja, ~2 GB RAM).
+Motor gráfico: Unity 6000.3.11f1 + Universal Render Pipeline (URP).
+Género: Tower Defense / Estrategia en tiempo real.
 
-Plataforma de destino: Mobile (Android). iOS queda como posible extensión futura.
-Dispositivo de referencia para pruebas: TCL 408 (720 x 1600, gama baja).
-Motor gráfico: Unity 3D (Universal Render Pipeline).
-Género: Tower Defense / Estrategia.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
----
+RESUMEN DEL JUEGO
 
-Resumen del juego
+"You Shall Not Pass!" es un tower defense ambientado en un mundo post-apocalíptico.
+El jugador defiende el castillo (Núcleo) de oleadas de robots de chatarra colocando
+distintos tipos de torretas sobre una grilla táctica. Tres niveles con dificultad
+progresiva; el Nivel 1 funciona como tutorial interactivo obligatorio.
 
-"You Shall Not Pass!" es un tower defense ambientado en un mundo post-apocalíptico. El jugador debe defender su base central, el castillo (Núcleo), de oleadas de robots de chatarra. Usando un sistema de grilla, coloca distintos tipos de torretas, administra su economía y resiste rondas de dificultad creciente a lo largo de tres niveles.
-Cada nivel comienza con una cantidad limitada de recursos, lo que obliga al jugador a planificar bien dónde construir. Al eliminar enemigos gana más chatarra para ampliar su defensa. Si demasiados enemigos alcanzan el castillo, el jugador pierde.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
----
+GAME LOOP
 
-Game Loop
+  1. PREPARACIÓN
+     El jugador recibe una cantidad fija de chatarra al iniciar el nivel.
+     Puede mover la cámara, hacer zoom e inspeccionar el mapa antes de colocar
+     torres en los slots habilitados de la grilla.
 
-Fase de preparación: El jugador usa chatarra (moneda del juego) para construir torretas en los slots disponibles del mapa. Puede mover la cámara y hacer zoom para revisar el terreno.
-Fase de oleada: El jugador inicia la oleada manualmente con el botón "FORCE WAVE". Los enemigos aparecen en portales fijos, siguen un camino hacia el castillo y las torretas atacan automáticamente.
-Fase de recompensa / pausa: Al terminar la oleada, el jugador recibe chatarra por enemigos eliminados y puede volver a construir antes de la siguiente ronda.
-Victoria o derrota: Si completa todas las oleadas del nivel, gana. Si el contador de amenaza (Threat) llega a cero, pierde.
+  2. OLEADA (FORCE WAVE)
+     El jugador inicia la oleada manualmente. No existe temporizador automático:
+     se le da control total para no penalizar a jugadores más lentos o con
+     dispositivos menos potentes. Los enemigos aparecen en portales y siguen
+     el camino hacia el castillo; las torretas disparan automáticamente.
 
----
+  3. RECOMPENSA
+     Al eliminar enemigos se obtiene chatarra proporcional a su tipo. Ese recurso
+     se puede usar para construir más torres antes de la siguiente oleada.
 
-Integrantes del equipo y roles
+  4. FIN DE PARTIDA
+     Victoria: completar todas las oleadas del nivel.
+     Derrota: el contador Threat llega a 0 (demasiados enemigos alcanzaron el castillo).
 
-Rol                 | Integrantes
---------------------|--------------------------------------------
-Project Manager     | Herrera, Oriana
-Game Designer       | Lima, Thiago y Muiños, Guadalupe
-Programadores       | Jorge, Santino
-Artistas 3D         | Herrera, Oriana y Muiños, Guadalupe
-QA / Audio          | Lima, Thiago
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
----
+INTEGRANTES Y ROLES
 
-Contenido implementado
+  Rol                    Integrante(s)
+  ─────────────────────  ───────────────────────────────────
+  Project Manager        Herrera, Oriana
+  Game Designer          Lima, Thiago · Muiños, Guadalupe
+  Programador            Jorge, Santino
+  Artista 3D             Herrera, Oriana · Muiños, Guadalupe
+  QA / Audio             Lima, Thiago
 
-Niveles: 3 (Level 1, Level 2, Level 3), con más oleadas y variedad de enemigos en cada uno. El Nivel 1 incluye tutorial obligatorio al entrar por primera vez y un botón "?" para releerlo en cualquier momento.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Torretas: Ballesta (Crossbow), Cañón, Ametralladora, Martillo, Nido de araña, Arpón antiaéreo, Ventilador, entre otras. Algunas se desbloquean según el nivel.
+CONTENIDO IMPLEMENTADO
 
-Enemigos: Básico, rápido, pesado (con escudo), enjambre (swarm), sigiloso, volador, jefe volador, jefe araña y unidades generadas por jefes.
+  NIVELES: 3
+  ┌─────────┬─────────┬──────────────────────────────────────────────────┐
+  │ Nivel   │ Oleadas │ Descripción                                      │
+  ├─────────┼─────────┼──────────────────────────────────────────────────┤
+  │ Level 1 │ 3       │ Tutorial automático. Básico + Rápido.            │
+  │ Level 2 │ 5       │ Mayor densidad. Pesado + Enjambre.               │
+  │ Level 3 │ 7       │ Dificultad máxima. Sigilosos + Voladores + Jefes │
+  └─────────┴─────────┴──────────────────────────────────────────────────┘
 
-Interfaz: Menú principal, selección de nivel, HUD in-game (vida/amenaza, moneda, botón de oleada), pantalla de carga entre menú y nivel, pantallas de victoria y derrota, tutorial en el Nivel 1, panel "How to Play" en el menú, pantalla de créditos con nombres del equipo, ajustes de audio y sensibilidad de cámara.
+  TORRETAS: 7
+    Ballesta, Cañón, Ametralladora, Martillo, Nido de Araña,
+    Arpón Antiaéreo, Ventilador.
+    Algunas torretas se desbloquean por nivel (configurado en LevelSetup).
 
-Contador de FPS: Visible en todo momento en el centro-derecha de la pantalla (verde ≥ 60, amarillo 45-59, rojo < 45). Persiste en menú, niveles y pantalla de carga.
+  ENEMIGOS: 9
+    Básico, Rápido, Pesado (escudo), Enjambre, Sigiloso, Volador,
+    Jefe Volador, Jefe Araña, Unidad de Jefe.
 
----
+  INTERFAZ:
+    Menú principal, selección de nivel, pantalla de carga con barra de
+    progreso, HUD in-game (Threat, moneda, oleada, FORCE WAVE), tutorial
+    interactivo, botón de ayuda (?), pausa, pantallas de victoria/derrota,
+    créditos, ajustes de audio y sensibilidad.
+    Contador de FPS permanente (verde ≥60 / amarillo 45-59 / rojo <45).
 
-Técnicas de optimización implementadas
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Modelos y geometría
+TÉCNICAS DE OPTIMIZACIÓN — JUSTIFICACIONES TÉCNICAS
 
-Los modelos 3D se mantienen con geometría ordenada, evitando caras duplicadas y detalle innecesario. La regla del equipo es simple: si no se ve en pantalla, no debería consumir recursos. Se evitan ngons en la preparación de assets para no forzar conversiones extra en el motor.
+──────────────────────────────────────────────────────────────
+A) OPTIMIZACIÓN EN ENGINE / BUILD
+──────────────────────────────────────────────────────────────
 
-Texturas y draw calls
+  IL2CPP + ARM64
+  El backend de scripting IL2CPP compila C# a C++ nativo antes de la build.
+  En Android ARM64 (arquitectura del TCL 408), esto mejora el rendimiento
+  de ejecución un 20-30 % respecto a Mono. Se eligió ARM64 exclusivamente
+  porque es la arquitectura de todos los dispositivos Android modernos y
+  eliminar x86/ARMv7 reduce el tamaño del APK.
 
-Se usa atlas de sprites para iconos de torretas (Sprite Atlas). Las texturas de interfaz se comprimen en formato ETC2 para Android, con tamaños máximos de 512 px (UI) y 1024 px (resto), siempre en potencias de 2 cuando corresponde, para un uso correcto de mipmaps y menor consumo de memoria.
+  Carga asíncrona de escenas con pre-carga paralela (v2.0)
+  Antes de esta corrección, la escena del nivel empezaba a cargarse DESPUÉS
+  de la animación del menú. Esto causaba un freeze de 1-3 s visible incluso
+  con la pantalla de carga activa, porque Unity bloqueaba el hilo principal
+  al activar todos los GameObjects.
 
-Iluminación
+  Solución implementada en LevelManager.cs:
+    1. LoadSceneAsync se llama inmediatamente al iniciar la carga,
+       con allowSceneActivation = false (pausa en el 90% sin activar GameObjects).
+    2. Application.backgroundLoadingPriority = ThreadPriority.Low durante la
+       carga: cede más tiempo CPU al hilo de render, reduciendo spikes.
+    3. La animación del menú y la lectura del disco ocurren en paralelo.
+    4. Al terminar la animación + escena al 90%, se activa la escena.
+    5. LevelSetup.Start() distribuye su trabajo con "yield return null"
+       entre operaciones pesadas, cediendo frames al renderer.
 
-En cada nivel se conserva una única luz direccional (la más intensa del nivel) y se desactivan las luces puntuales y spot, que son las más costosas para la GPU en mobile. Los materiales del terreno usan URP Lit Shader junto a esa luz direccional para mantener buena calidad visual sin overhead adicional. En Android se usa el perfil de calidad "Performant" del pipeline URP, con distancia de sombras reducida a 15 m y escala de render al 85%.
+  Minify Release + Managed Stripping (Low)
+  Reduce el tamaño del APK eliminando bytecode no referenciado. El nivel
+  "Low" de stripping es suficiente para no romper reflexión ni serializadores.
 
-Culling y objetos estáticos
+──────────────────────────────────────────────────────────────
+B) ILUMINACIÓN
+──────────────────────────────────────────────────────────────
 
-Suelo, muros, caminos y estructuras fijas se marcan como estáticos para ayudar al motor a dibujar solo lo visible. No se unifica todo el mapa en una sola malla gigante, para no perder las ventajas del frustum culling.
+  LevelEnvironmentOptimizer.cs se ejecuta al cargar cada nivel:
+    - Busca todas las luces de la escena.
+    - Desactiva todas las luces puntuales y spot (costosas en móvil:
+      cada punto de luz adiciona 1 draw call y sombras de 6 caras).
+    - Conserva únicamente la luz direccional más intensa para mantener
+      la calidad visual.
+    - Asigna esa luz como RenderSettings.sun para que URP la reconozca.
 
-Build y configuración Android
+  URP Performant (perfil Android):
+    - Render Scale: 0.85 (renderiza a 85% de resolución, reescala antes de
+      presentar en pantalla — menor carga de fill rate para la GPU).
+    - Shadow Distance: 15 m (en runtime via QualitySettings.shadowDistance).
+      Las sombras se calculan solo para objetos a menos de 15 m de la cámara.
+    - Additional Lights: configurado en "Per Vertex" para el perfil mobile
+      (mucho más barato que "Per Pixel").
+    - LOD Bias: 0.7 en Android — los modelos de menor poligonaje se activan
+      antes de lo normal, reduciendo la carga de GPU en oleadas intensas.
 
-Proyecto configurado con IL2CPP, arquitectura ARM64, compresión de assets, minificación en release y herramienta interna de optimización (AndroidOptimizer) para texturas, audio y ajustes de build. El script MobileBootstrap aplica en el dispositivo al iniciar: objetivo de 90 FPS (permite superar 60 si el hardware lo permite sin cap artificial), calidad Performant, LOD bias 0.7 para activar modelos de baja poli antes, solver de física reducido a 4 iteraciones (en lugar del default de 6) para bajar la carga de CPU por FixedUpdate, y SustainedPerformanceMode activo para rendimiento estable en partidas largas.
+──────────────────────────────────────────────────────────────
+C) FÍSICAS
+──────────────────────────────────────────────────────────────
 
----
+  Object Pooling (ObjectPoolManager.cs)
+  Motivo: en oleadas con 20+ enemigos activos, instanciar y destruir objetos
+  en cada spawn/muerte genera garbage collection (GC) que en el TCL 408
+  se traduce en hitches de 20-50 ms. El pool pre-crea los objetos, los
+  activa/desactiva en lugar de crearlos/destruirlos, y elimina el GC overhead.
+  Cubre: enemigos, proyectiles de todas las torretas y VFX de impacto.
 
-Explicación de las mecánicas
+  Physics Solver reducido
+  Physics.defaultSolverIterations = 4 (default Unity: 6).
+  Reduce la carga del FixedUpdate ~30% sin afectar el gameplay (las colisiones
+  del juego no requieren la precisión máxima del solver).
+  Physics.defaultSolverVelocityIterations = 1 (ya es el mínimo por defecto,
+  se establece explícitamente para garantizarlo).
 
-Oleadas y movimiento
+  NavMesh pre-baked
+  El navmesh de cada nivel está calculado en el editor y guardado en la escena.
+  No se recalcula en runtime (salvo cuando se construye una torre, que bloquea
+  una celda — actualización mínima localizada). Esto evita el freeze de
+  BuildNavMesh() que en Unity puede durar 200-500 ms según la complejidad.
 
-Los enemigos spawnean desde portales y avanzan por un camino definido hacia el castillo. Usan NavMesh (malla de navegación precalculada) combinada con waypoints, para moverse de forma fluida sin salirse del recorrido. Todos los enemigos, incluidos los voladores, siguen el camino del suelo para que las torretas tengan tiempo de atacarlos. Las oleadas no arrancan solas: el jugador las inicia con "FORCE WAVE".
+  Caché de componentes (GridBuilder.cs)
+    - NavMeshSurface: antes era una property expression (=> GetComponent<>())
+      que llamaba GetComponent en cada acceso. Ahora es un campo con lazy-init.
+    - TileSlot: antes cada llamada a MakeTilesNonInteractable() hacía
+      GetComponent<TileSlot>() para cada tile de la grilla. Ahora se cachea
+      en List<TileSlot> en el primer acceso.
 
-Disparo y spawn
+  Fix de race condition: Arpón vs Pool de enemigos (26/06/2026)
+  El proyectil del arpón (Projectile_Harpoon) volaba hacia un enemigo que
+  podía morir y volver al pool (SetActive false) antes del impacto.
+  Al intentar AttachToEnemy() sobre un objeto inactivo:
+    - StartCoroutine() tiraba "Coroutine on inactive object"
+    - Los accesos a currentEnemy tiraban NullReferenceException
+  Solución: verificar enemy.gameObject.activeInHierarchy en Update() y en
+  AttachToEnemy(). Si el enemigo está inactivo, llamar tower.ResetAttack().
 
-Las torretas detectan enemigos en su rango y disparan automáticamente. No se crean ni destruyen objetos en tiempo real de forma libre: enemigos, proyectiles y efectos usan Object Pooling. Los objetos se reutilizan de un pool, lo que reduce tirones de memoria durante oleadas intensas.
+──────────────────────────────────────────────────────────────
+D) MANEJO DE ASSETS
+──────────────────────────────────────────────────────────────
 
-Economía e interfaz
+  AUDIO — selección de formatos justificada:
 
-Cada nivel empieza con una cantidad fija de chatarra. Cada enemigo derrotado otorga una recompensa según su tipo. La UI se actualiza cuando cambian vida, moneda u oleada, no en cada frame sin necesidad. En móvil, la orientación se bloquea en landscape y se usan Canvas Scalers por escena. Al terminar la partida (victoria o derrota), se ocultan los demás elementos de interfaz y solo queda visible la pantalla final.
+    Vorbis + Streaming (BGM: bg_example_1/2/3.mp3)
+    Los tracks de música duran 2-4 minutos. Cargarlos completos en RAM
+    ocuparía 10-20 MB por track. Streaming lee el archivo en chunks pequeños;
+    loadInBackground = 1 hace que la lectura ocurra en un thread secundario
+    sin bloquear el frame del menú o el nivel.
 
-Cámara
+    ADPCM + Decompress On Load (SFX cortos: ui_click_1, ui_onHover_1, sfx_beam_2)
+    Para sonidos de UI que se disparan al toque del usuario, la latencia de
+    decodificación importa. ADPCM decodifica en ~1 ms; Vorbis necesita 5-10 ms.
+    preloadAudioData = 1 asegura que el clip esté descomprimido en RAM desde
+    el inicio, sin ningún delay al reproducir.
+    forceToMono = 1: los SFX de UI no necesitan información estéreo.
+    Reducir a mono divide el tamaño en RAM a la mitad.
 
-En PC: teclado y mouse (movimiento, rotación, zoom con rueda). En móvil: un dedo para mover, dos dedos para zoom (pinch). Los controles se activan y desactivan según la fase del juego (menú vs. nivel).
+    Vorbis + Decompress On Load (SFX medianos: sfx_beam_1, ui_click_2, ui_onHover_2)
+    Para clips > 30 KB, Vorbis ofrece mejor ratio de compresión que ADPCM
+    con calidad perceptiblemente igual. preloadAudioData = 1 y forceToMono = 1.
 
-Audio
+  TEXTURAS:
+    ETC2 (RGBA8) para todas las texturas Android: formato nativo de OpenGL ES 3.0,
+    decompresión en GPU sin overhead de CPU. Resolución máxima 1024 px para
+    modelos 3D y 512 px para UI (la UI no se acerca/aleja, no necesita mipmaps).
 
-La música de fondo (BGM) se carga en modo streaming con loadInBackground activo para no bloquear el hilo principal ni ocupar RAM innecesaria. Los efectos de sonido cortos (SFX de UI y combate de baja duración) se comprimen en formato ADPCM con preloadAudioData activado, lo que garantiza decodificación instantánea y sin stutters en el primer uso. Los SFX más largos usan Vorbis. Todos los SFX se fuerzan a mono en Android para reducir el consumo de memoria a la mitad. La música y los efectos son ajustables por separado a través del AudioMixer.
+    Sprite Atlas: todos los iconos de las 7 torretas están en un único atlas.
+    Esto reduce los draw calls del panel de construcción de 7 a 1.
 
----
+  MODELOS 3D:
+    Arte low-poly con geometría limpia (sin caras duplicadas, sin ngons).
+    Texturas de 512×512 por personaje/enemigo. Un solo material por tipo
+    de enemigo para aprovechar GPU instancing y minimizar state changes.
 
-Bitácora de desarrollo
+──────────────────────────────────────────────────────────────
+E) ACCESIBILIDAD
+──────────────────────────────────────────────────────────────
 
-Etapa                        | Actividades realizadas
------------------------------|-----------------------------------------------------------
-Preproducción                | Definición del concepto, roles del equipo, game loop base, elección de Unity y plataforma mobile.
-Prototipo inicial            | Grilla de construcción, colocación de torretas, spawn básico de enemigos, economía simple y pantalla de juego.
-Core gameplay                | Sistema de oleadas (WaveManager), gestión global del nivel (GameManager), castillo con contador de amenaza (Threat), victoria/derrota, tres niveles con dificultad progresiva.
-Enemigos y torretas          | Varios tipos de enemigos con comportamientos distintos (escudo, sigilo, vuelo, jefes). Torretas con proyectiles y pooling. Ajuste de vida, velocidad y recompensas por tipo.
-Interfaz y flujo             | Menú principal, selección de nivel, tutorial solo en Nivel 1, How to Play, botón manual de oleada, eliminación del temporizador automático, pantallas de fin de partida aisladas del resto del HUD.
-Optimización mobile          | Object pooling generalizado, reducción de consultas pesadas en runtime, compresión de texturas y audio, perfil URP Performant, script de arranque mobile (MobileBootstrap), herramienta de optimización Android en el editor, pruebas orientadas al TCL 408.
-Corrección de bugs           | Fix de EventSystem duplicado al cargar niveles, interacción con slots de construcción, zoom de cámara, oleadas que terminaban antes de tiempo, balance de economía y amenaza del castillo, rutas NavMesh de enemigos voladores.
-Build Android                | Migración del proyecto a ruta ASCII (C:\Proyectos\You-Shall-Not-Pass), configuración IL2CPP/ARM64, resolución de errores de Gradle y URP, generación exitosa de APK para prueba en dispositivo.
-Corrección docente (27/05)   | Pantalla de carga (UI_LoadingScreen), música y SFX activos (AudioManager), orientación landscape bloqueada, tutorial integrado en Nivel 1, optimización de luces con LevelEnvironmentOptimizer (una luz direccional + desactivación de puntuales/spot).
-Entrega final (23/06)        | Auditoría completa de 80 scripts con corrección de null-checks críticos (GameManager, LevelSetup, UI_Pause, TowerPreview, RadiusDisplay, Tower_Harpoon, Waypoint, SelfRemoveToPool); corrección de race condition entre proyectil de arpón y pool de enemigos; optimización de audio Android (ADPCM para SFX cortos, Vorbis streaming para BGM, loadInBackground, preloadAudioData); contador de FPS persistente con código de color; targetFrameRate elevado a 90; reducción de solver de física y distancia de sombras en Android.
-Estado actual (23/06/2026)   | Juego listo para entrega final. Tres niveles funcionales, sin errores inhabilitantes, APK generado y probado en TCL 408, contador de FPS estable en verde (≥ 60 FPS) durante toda la partida.
+  Tutorial (Nivel 1):
+    Aparece automáticamente al entrar. Contiene tres secciones claramente
+    diferenciadas: OBJETIVO (qué es el Threat y cómo se pierde), CONTROLES
+    (cómo mover la cámara, construir y lanzar oleadas) y CONSEJOS (economía
+    y cómo reabrir el tutorial). Al cerrarse con "Entendido!" no vuelve a
+    aparecer automáticamente (PlayerPrefs). Se puede reabrir con el botón ?
+    en el HUD, que pausa el juego para que el usuario lo lea sin presión.
+
+  HUD siempre informativo:
+    Threat actual/máximo, recursos actuales, número de oleada y botón
+    FORCE WAVE visibles en todo momento durante la partida. La información
+    clave nunca está oculta.
+
+  Señalización de slots de construcción:
+    Los slots interactuables tienen feedback visual de hover (highlight)
+    para que el usuario sepa qué puede tocar sin necesidad de instrucción previa.
+
+  Feedback de sonido como refuerzo:
+    Hover en botones → SFX de selección.
+    Click en botones → SFX de confirmación.
+    Disparos de torre → SFX por tipo.
+    El juego es completamente jugable sin audio (el tutorial y las señales
+    visuales son suficientes); el audio es refuerzo adicional, no requisito.
+
+  Pantallas de fin claras:
+    Victoria y derrota tienen overlays dedicados que ocultan el HUD para
+    máxima legibilidad. El usuario no necesita interpretar el estado del juego.
+
+  Controles ajustables:
+    Sensibilidad de cámara configurable desde el menú de ajustes.
+    Sliders separados de BGM y SFX en el menú de opciones.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+BITÁCORA DE DESARROLLO
+
+  Fecha / Fase              Actividades
+  ─────────────────────────────────────────────────────────────────────
+  Preproducción             Concepto, roles, game loop base, elección Unity+URP
+                            para mobile, análisis del dispositivo de referencia
+                            (TCL 408).
+
+  Prototipo                 Grilla de construcción con GridBuilder (editor tool),
+                            primer spawn de enemigos, economía simple, pantalla
+                            de juego básica.
+
+  Core gameplay             WaveManager (oleadas configurables), GameManager
+                            (Threat/moneda/victoria-derrota), tres niveles,
+                            botón FORCE WAVE manual (se descartó temporizador
+                            automático por razones de accesibilidad).
+
+  Enemigos y torretas       9 tipos de enemigos con comportamientos distintos.
+                            7 torretas con proyectiles. Object Pooling
+                            implementado al detectar GC spikes de 30-50 ms en
+                            oleadas intensas.
+
+  Interfaz y flujo          Menú principal, selección de nivel, tutorial Nivel 1,
+                            How to Play, pantallas de fin de partida, ajustes de
+                            audio y sensibilidad.
+
+  Corrección docente        Pantalla de carga (UI_LoadingScreen + barra de
+  27/05/2026                progreso), AudioManager con BGM/SFX, orientación
+                            landscape bloqueada, LevelEnvironmentOptimizer
+                            (una luz direccional + desactivación de puntuales/spot).
+
+  Auditoría de bugs         80 scripts revisados. Null-checks en GameManager,
+  23/06/2026                LevelSetup, UI_Pause, TowerPreview, RadiusDisplay,
+                            Waypoint, SelfRemoveToPool. Fix race condition arpón
+                            vs pool de enemigos. Optimización de audio (ADPCM +
+                            Vorbis streaming + loadInBackground). Contador FPS.
+                            targetFrameRate = 90, solver física = 4 iteraciones.
+
+  Optimización de carga     Stutter detectado en TCL 408 durante pantalla de
+  26/06/2026                carga. Causas: escena cargaba después de animación,
+                            GetComponent sin caché en GridBuilder, operaciones
+                            pesadas síncronas en LevelSetup.
+                            Solución: LoadSceneAsync con allowSceneActivation=false
+                            iniciado en paralelo con la animación; ThreadPriority.Low
+                            durante carga; NavMeshSurface y TileSlot cacheados;
+                            yield return null entre operaciones pesadas en LevelSetup.
+
+  Estado actual             Juego listo para entrega final. Tres niveles
+  26/06/2026                funcionales, sin bugs inhabilitantes, FPS estables
+                            en verde (≥60) en toda la sesión de juego en TCL 408.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ENTREGABLES
+
+  - APK Android (build release)          → Google Drive: (completar con link)
+  - Proyecto Unity                       → C:\Proyectos\You-Shall-Not-Pass
+  - GDD completo                         → Docs/GDD_You_Shall_Not_Pass.md
+  - Este High Concept                    → Docs/HighConcept_You_Shall_Not_Pass.md

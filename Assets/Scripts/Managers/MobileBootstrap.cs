@@ -14,6 +14,11 @@ public static class MobileBootstrap
         Application.targetFrameRate = 90;
         QualitySettings.vSyncCount  = 0;
 
+        // La carga en segundo plano con prioridad Low cede más tiempo al hilo principal,
+        // reduciendo los spikes de FPS durante la carga de escenas. Se eleva a BelowNormal
+        // una vez que la escena está activa (lo hace LevelManager).
+        Application.backgroundLoadingPriority = ThreadPriority.BelowNormal;
+
         // Reducir iteraciones del solver de física (default 6 → 4):
         // conserva comportamiento de juego pero baja la carga de CPU por FixedUpdate.
         Physics.defaultSolverIterations         = 4;

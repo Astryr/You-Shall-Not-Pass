@@ -33,7 +33,10 @@ public class LevelSetup : MonoBehaviour
             ui?.ShowLoadingScreen("Construyendo nivel...");
 
             LevelEnvironmentOptimizer.Apply();
+            yield return null; // ceder frame para que la pantalla de carga se renderice
+
             DeleteExtraObjects();
+            yield return null;
 
             // Tras borrar duplicados del nivel, re-vincular la UI de MainScene (nunca la del nivel).
             ui = FindMainSceneUI();
@@ -41,6 +44,7 @@ public class LevelSetup : MonoBehaviour
             buildManager = FindFirstObjectByType<BuildManager>();
             buildManager?.ClearBuildSelection();
             buildManager?.UpdateBuildManager(myWaveManager);
+            yield return null;
 
             levelManager.UpdateCurrentGrid(myMainGrid);
 

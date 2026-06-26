@@ -5,7 +5,17 @@ using UnityEngine;
 
 public class GridBuilder : MonoBehaviour
 {
-    private NavMeshSurface myNavMesh => GetComponent<NavMeshSurface>();
+    // Cached — evita llamar GetComponent<NavMeshSurface>() en cada acceso
+    private NavMeshSurface _navMesh;
+    private NavMeshSurface myNavMesh
+    {
+        get
+        {
+            if (_navMesh == null) _navMesh = GetComponent<NavMeshSurface>();
+            return _navMesh;
+        }
+    }
+
     [SerializeField] private GameObject mainPrefab;
 
     [SerializeField] private int gridLength = 10;
@@ -13,16 +23,29 @@ public class GridBuilder : MonoBehaviour
 
     [SerializeField] private List<GameObject> createdTiles;
 
-    public List<GameObject> GetTileSetup() => createdTiles;
-    public void UpdateNavMesh() => myNavMesh.BuildNavMesh();
+    // Caché de TileSlot por tile — evita GetComponent por tile en cada llamada
+    private List<TileSlot> cachedTileSlots;
 
+    public List<GameObject> GetTileSetup() => createdTiles;
+    public void UpdateNavMesh() => myNavMesh?.BuildNavMesh();
 
     private bool hadFirstLoad;
 
+    private List<TileSlot> GetTileSlots()
+    {
+        if (cachedTileSlots == null || cachedTileSlots.Count != createdTiles.Count)
+        {
+            cachedTileSlots = new List<TileSlot>(createdTiles.Count);
+            foreach (var tile in createdTiles)
+                cachedTileSlots.Add(tile != null ? tile.GetComponent<TileSlot>() : null);
+        }
+        return cachedTileSlots;
+    }
+
     public void DisableShadowsIfNeeded()
     {
-        foreach (var tile in createdTiles)
-            tile.GetComponent<TileSlot>().DisableShadowsIfNeeded();
+        foreach (var slot in GetTileSlots())
+            slot?.DisableShadowsIfNeeded();
     }
 
     public bool IsOnFirstLoad()
@@ -74,7 +97,7 @@ public class GridBuilder : MonoBehaviour
 
     public void MakeTilesNonInteractable(bool makeNonInteractable)
     {
-        foreach(var tile in createdTiles)
-            tile.GetComponent<TileSlot>().MakeNonInteractable(makeNonInteractable);
+        foreach (var slot in GetTileSlots())
+            slot?.MakeNonInteractable(makeNonInteractable);
     }
 }

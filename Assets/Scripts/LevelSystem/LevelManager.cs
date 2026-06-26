@@ -46,17 +46,44 @@ public class LevelManager : MonoBehaviour
         ui.ShowLoadingScreen("Recargando nivel...");
         CleanUpScene();
         ui.EnableInGameUI(false);
-
         cameraEffects.SwitchToGameView();
+
+        // Esperar la animación de limpieza
         yield return tileAnimator.GetCurrentActiveCo();
 
-        UnloadCurrentScene();
-        LoadScene(levelName);
+        // Descargar nivel anterior
+        string sceneToUnload = currentLevelName;
+        if (!string.IsNullOrEmpty(sceneToUnload))
+        {
+            AsyncOperation unload = SceneManager.UnloadSceneAsync(sceneToUnload);
+            if (unload != null) yield return unload;
+        }
+
+        // Precargar nueva escena en background, pausada antes de activar GameObjects
+        currentLevelName = levelName;
+        Application.backgroundLoadingPriority = ThreadPriority.Low;
+        AsyncOperation load = SceneManager.LoadSceneAsync(levelName, LoadSceneMode.Additive);
+        load.allowSceneActivation = false;
+
+        while (load.progress < 0.9f)
+            yield return null;
+
+        load.allowSceneActivation = true;
+        yield return new WaitUntil(() => load.isDone);
+        Application.backgroundLoadingPriority = ThreadPriority.BelowNormal;
     }
 
     private IEnumerator LoadLevelFromMenuCo(string levelName)
     {
         ui.ShowLoadingScreen("Cargando nivel...");
+
+        // Iniciar la carga async INMEDIATAMENTE, pausada hasta que la animación termine.
+        // Así el I/O y la descompresión de assets ocurren mientras el menú se anima,
+        // evitando el spike de FPS que se producía al cargar después de la animación.
+        Application.backgroundLoadingPriority = ThreadPriority.Low;
+        AsyncOperation sceneLoad = SceneManager.LoadSceneAsync(levelName, LoadSceneMode.Additive);
+        sceneLoad.allowSceneActivation = false;
+        currentLevelName = levelName;
 
         tileAnimator.ShowMainGrid(false);
         ui.EnableMainMenuUI(false);
@@ -66,11 +93,17 @@ public class LevelManager : MonoBehaviour
 
         cameraEffects.SwitchToGameView();
 
+        // Esperar animación de salida del menú Y que la escena esté prelistta (>= 90 %)
         yield return tileAnimator.GetCurrentActiveCo();
+        while (sceneLoad.progress < 0.9f)
+            yield return null;
 
         tileAnimator.EnableMainSceneObjects(false);
 
-        LoadScene(levelName);
+        // Activar la escena: Unity instancia todos los GameObjects en este frame
+        sceneLoad.allowSceneActivation = true;
+        yield return new WaitUntil(() => sceneLoad.isDone);
+        Application.backgroundLoadingPriority = ThreadPriority.BelowNormal;
     }
 
     private IEnumerator LoadMainMenuCo()
@@ -91,12 +124,6 @@ public class LevelManager : MonoBehaviour
         ui.HideLoadingScreen();
         ui.EnableMainMenuUI(true);
         AudioManager.instance?.PlayMenuMusic();
-    }
-
-    private void LoadScene(string sceneNameToLoad)
-    {
-        currentLevelName = sceneNameToLoad;
-        SceneManager.LoadSceneAsync(sceneNameToLoad,LoadSceneMode.Additive);
     }
 
     private void UnloadCurrentScene() => SceneManager.UnloadSceneAsync(currentLevelName);
