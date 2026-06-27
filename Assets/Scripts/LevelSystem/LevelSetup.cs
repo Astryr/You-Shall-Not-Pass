@@ -43,7 +43,7 @@ public class LevelSetup : MonoBehaviour
 
             buildManager = FindFirstObjectByType<BuildManager>();
             buildManager?.ClearBuildSelection();
-            buildManager?.UpdateBuildManager(myWaveManager);
+            buildManager?.UpdateBuildManager(myWaveManager, myMainGrid);
             yield return null;
 
             levelManager.UpdateCurrentGrid(myMainGrid);

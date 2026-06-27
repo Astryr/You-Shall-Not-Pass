@@ -58,8 +58,8 @@ public class BuildManager : MonoBehaviour
 
         bool hasInput = false;
         Vector3 inputPosition = Vector3.zero;
+        int touchFingerId = -1;
 
-        // Toque (móvil) o clic: ignorar si el puntero está sobre UI de Unity; los botones de torre también marcan isMouseOverUI.
         if (Input.touchCount > 0)
         {
             Touch touch = Input.GetTouch(0);
@@ -67,48 +67,61 @@ public class BuildManager : MonoBehaviour
             {
                 hasInput = true;
                 inputPosition = touch.position;
-
-                if (UnityEngine.EventSystems.EventSystem.current != null && 
-                    UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId))
-                    return;
+                touchFingerId = touch.fingerId;
             }
         }
         else if (Input.GetKeyDown(KeyCode.Mouse0))
         {
             hasInput = true;
             inputPosition = Input.mousePosition;
-
-            if (UnityEngine.EventSystems.EventSystem.current != null && 
-                UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject())
-                return;
         }
 
-        if (hasInput)
+        if (!hasInput || isMouseOverUI || Camera.main == null)
+            return;
+
+        Ray ray = Camera.main.ScreenPointToRay(inputPosition);
+
+        // IMPORTANTE: raycast SIN restricción de capas (no usar ~whatToIgnore aquí).
+        // whatToIgnore está configurado en el inspector para ignorar ciertos objetos al
+        // cancelar la selección, pero puede excluir accidentalmente la capa en la que
+        // están los tiles BuildSlot (p.ej. Default/0). Si se usa ~whatToIgnore aquí,
+        // el raycast nunca golpea los tiles y la selección nunca se activa.
+        if (Physics.Raycast(ray, out RaycastHit buildHit, Mathf.Infinity))
         {
-            if (isMouseOverUI)
-                return;
-
-            if (Camera.main == null)
-                return;
-
-            // Clic fuera de una casilla de construcción cancela la selección / preview.
-            if (Physics.Raycast(Camera.main.ScreenPointToRay(inputPosition), out RaycastHit hit, Mathf.Infinity, ~whatToIgnore))
+            // GetComponentInParent cubre el caso donde el Collider está en un hijo
+            // y el componente BuildSlot está en el raíz del tile.
+            BuildSlot hitSlot = buildHit.collider.GetComponentInParent<BuildSlot>();
+            if (hitSlot != null)
             {
-                bool clickedNotOnBuildSlot = hit.collider.GetComponent<BuildSlot>() == null;
-
-                if (clickedNotOnBuildSlot)
-                    CancelBuildAction();
-            }
-            else
-            {
-                // Clicked outside any collider, cancel build menu
-                CancelBuildAction();
+                hitSlot.TriggerSelect();
+                return;
             }
         }
+
+        // No se tocó ningún BuildSlot. Solo cancelar si el toque tampoco está sobre UI
+        // (evita cerrar el menú al presionar botones de torre).
+        bool overUI = UnityEngine.EventSystems.EventSystem.current != null &&
+                      (touchFingerId >= 0
+                          ? UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touchFingerId)
+                          : UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject());
+
+        if (!overUI)
+            CancelBuildAction();
     }
 
     public void UpdateBuildManager(WaveManager newWaveManager)
     {
+        MakeBuildSlotNotAvalibleIfNeeded(newWaveManager, currentGrid);
+    }
+
+    /// <summary>
+    /// Actualiza el WaveManager Y el grid activo del nivel.
+    /// Llamado por LevelSetup al cargar un nivel para que la comparación
+    /// de tiles use el grid correcto y no el que estaba en el inspector de MainScene.
+    /// </summary>
+    public void UpdateBuildManager(WaveManager newWaveManager, GridBuilder newCurrentGrid)
+    {
+        currentGrid = newCurrentGrid;
         MakeBuildSlotNotAvalibleIfNeeded(newWaveManager, currentGrid);
     }
     /// <summary>Confirma la torre en la casilla seleccionada: valida oro, gasta moneda, shake de cámara e Instantiate.</summary>
@@ -159,6 +172,12 @@ public class BuildManager : MonoBehaviour
     {
         if (waveManager == null)
             return;
+
+        if (currentGrid == null)
+        {
+            Debug.LogWarning("[BuildManager] MakeBuildSlotNotAvalibleIfNeeded: currentGrid es null. Asigna el grid del nivel correctamente.");
+            return;
+        }
 
         foreach (var wave in waveManager.GetLevelWaves())
         {

@@ -36,17 +36,16 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
 
     public void OnPointerDown(PointerEventData eventData)
     {
-        if (buildSlotAvalible == false || tileAnim.IsGridMoving())
-            return;
+        if (!buildSlotAvalible) return;
+        if (tileAnim == null || tileAnim.IsGridMoving()) return;
+        if (buildManager == null) return;
 
         if (eventData.button != PointerEventData.InputButton.Left)
             return;
 
         if (buildManager.GetSelectedSlot() == this)
         {
-            // On mobile, tap the same slot repeatedly to rotate the preview tower
-            if (ui != null && ui.buildButtonsUI != null)
-                ui.buildButtonsUI.RotatePreview(90);
+            ui?.buildButtonsUI?.RotatePreview(90);
             return;
         }
 
@@ -54,18 +53,57 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
         buildManager.EnableBuildMenu();
         buildManager.SelectBuildSlot(this);
         MoveTileUp();
-
         tileCanBeMoved = false;
+        ui?.buildButtonsUI?.GetLastSelectedButton()?.SelectButton(true);
+    }
 
-        ui.buildButtonsUI.GetLastSelectedButton()?.SelectButton(true);
+    /// <summary>
+    /// Selección directa sin EventSystem. Llamada por BuildManager via Physics.Raycast.
+    /// Es el camino principal en Android: evita depender de IsPointerOverGameObject
+    /// y de PhysicsRaycaster en la cámara.
+    /// </summary>
+    public void TriggerSelect()
+    {
+        if (!buildSlotAvalible)
+        {
+            Debug.LogWarning($"[BuildSlot] TriggerSelect ignorado: slot '{name}' marcado como no disponible.");
+            return;
+        }
+
+        // Si el TileAnimator no está disponible omitimos el check de animación pero
+        // intentamos proceder igual; MoveTileUp ya tiene su propia guarda.
+        if (tileAnim != null && tileAnim.IsGridMoving())
+        {
+            Debug.LogWarning("[BuildSlot] TriggerSelect ignorado: el grid está animándose.");
+            return;
+        }
+
+        if (buildManager == null)
+        {
+            Debug.LogError("[BuildSlot] TriggerSelect: BuildManager.instance es null. Verifica que BuildManager está en la escena y su Awake() se ejecutó.");
+            return;
+        }
+
+        if (buildManager.GetSelectedSlot() == this)
+        {
+            ui?.buildButtonsUI?.RotatePreview(90);
+            return;
+        }
+
+        SnapToBeforeBuildPosition();
+        buildManager.EnableBuildMenu();
+        buildManager.SelectBuildSlot(this);
+        MoveTileUp();
+        tileCanBeMoved = false;
+        ui?.buildButtonsUI?.GetLastSelectedButton()?.SelectButton(true);
     }
 
     public void OnPointerEnter(PointerEventData eventData)
     {
-        if (buildSlotAvalible == false || tileAnim.IsGridMoving())
+        if (!buildSlotAvalible || tileAnim == null || tileAnim.IsGridMoving())
             return;
 
-        if (tileCanBeMoved == false)
+        if (!tileCanBeMoved)
             return;
 
         MoveTileUp();
@@ -73,16 +111,14 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
 
     public void OnPointerExit(PointerEventData eventData)
     {
-        if (buildSlotAvalible == false || tileAnim.IsGridMoving())
+        if (!buildSlotAvalible || tileAnim == null || tileAnim.IsGridMoving())
             return;
 
-        if (tileCanBeMoved == false)
+        if (!tileCanBeMoved)
             return;
 
         if (currentMovementUpCo != null)
-        {
             Invoke(nameof(MoveToDefaultPosition), tileAnim.GetTravelDuration());
-        }
         else
             MoveToDefaultPosition();
     }
@@ -95,6 +131,8 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
 
     private void MoveTileUp()
     {
+        if (tileAnim == null) return;
+
         Vector3 targetPosition = transform.position + new Vector3(0, tileAnim.GetBuildOffset(), 0);
 
         if (!isActiveAndEnabled)
@@ -132,6 +170,7 @@ public class BuildSlot : MonoBehaviour, IPointerEnterHandler, IPointerExitHandle
 
     public void SnapToBeforeBuildPosition()
     {
+        if (tileAnim == null) return;
         Vector3 targetPosition = defaultPosition + new Vector3(0, tileAnim.GetBuildOffset(), 0);
         transform.position = targetPosition;
     }

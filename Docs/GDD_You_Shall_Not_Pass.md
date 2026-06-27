@@ -1,7 +1,7 @@
 # GDD — You Shall Not Pass!
 
-**Versión:** 2.1 (entrega final)
-**Fecha:** 26/06/2026
+**Versión:** 2.4 (entrega final)
+**Fecha:** 27/06/2026
 **Motor:** Unity 6000.3.11f1 — Universal Render Pipeline (URP)
 **Plataforma:** Android — dispositivo de referencia: TCL 408 (720×1600 px, gama baja)
 
@@ -233,6 +233,7 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | **NavMeshSurface cached** | `GridBuilder._navMesh` con lazy-init | Evita `GetComponent<NavMeshSurface>()` en cada acceso a la property |
 | **TileSlot cached** | `GridBuilder.cachedTileSlots` | Evita `GetComponent<TileSlot>()` × tiles en cada `MakeTilesNonInteractable` |
 | **Singletons de managers** | `static instance` en BuildManager, TileAnimator, UI | `BuildSlot.Awake()` antes hacía 3 `FindFirstObjectByType` por tile; ahora acceso O(1) |
+| **Doble ruta de selección** | `BuildSlot.TriggerSelect()` + `BuildManager` via Raycast | Fallback para Android cuando no hay `PhysicsRaycaster` en cámara; se detalla abajo |
 
 ### 7.4 Manejo de assets
 
@@ -368,9 +369,123 @@ Con 20-50 BuildSlots por nivel → **60-150 búsquedas O(n) en un solo frame**.
   - `QualitySettings.antiAliasing = 0`: MSAA desactivado globalmente en Android.
   - `cam.allowHDR = false` y `cam.allowMSAA = false`: desactivan render targets de alta precisión que no aportan calidad visible en el TCL 408 pero consumen bandwidth de GPU.
 
----
+### Fase 10 — Bug crítico Android: selección de tiles (26/06/2026)
 
-## 10. Entregables
+**Síntoma reportado:** en el APK de Android no era posible tocar una casilla de construcción para abrir el menú de torres. Los botones de menú y Start Wave funcionaban correctamente.
+
+**Causa raíz diagnosticada:**
+
+La causa tiene dos capas:
+
+**Capa 1 — Sin `PhysicsRaycaster` en la cámara:** `BuildSlot` implementa `IPointerDownHandler`. Para que el EventSystem despache ese evento a un **objeto 3D** (no UI), la cámara necesita `PhysicsRaycaster`. Sin él, el EventSystem nunca llama `OnPointerDown`.
+
+**Capa 2 (causa real del fallo del fallback) — Canvas con GraphicRaycaster cubre toda la pantalla:** El HUD, el menú de torres y otros Canvas del juego tienen `GraphicRaycaster` activo. En Android, cuando cualquier Canvas con `GraphicRaycaster` está visible, `EventSystem.IsPointerOverGameObject(fingerId)` devuelve `true` para **cualquier toque en pantalla**, no solo sobre botones visibles. El primer intento de fallback (v2.1/v2.2) colocaba el `IsPointerOverGameObject` check antes del Physics.Raycast:
+
+```
+Touch.Began → IsPointerOverGameObject = true (canvas en pantalla) → return anticipado → Physics.Raycast NUNCA EJECUTADO → tile no seleccionado
+```
+
+Por eso los botones UI funcionaban (EventSystem los manejaba) pero los tiles no (el fallback nunca se ejecutaba).
+
+**Soluciones aplicadas (v2.3):**
+
+1. **`BuildManager.Update()` reestructurado** — Physics.Raycast ahora se ejecuta **antes** de cualquier `IsPointerOverGameObject` check. Si golpea un `BuildSlot` → `TriggerSelect()` y return. Solo si NO golpea un BuildSlot se consulta `IsPointerOverGameObject` para decidir si cancelar (evitar cerrar el menú al tocar botones de torre). Se usa `GetComponentInParent<BuildSlot>()` en lugar de `GetComponent` para cubrir tiles donde el collider puede estar en un objeto hijo.
+
+2. **`CameraController`** — igual corrección de `GetComponent` → `GetComponentInParent`.
+
+**Flujo final correcto:**
+
+```
+Toque en tile
+│
+├─ Physics.Raycast → golpea collider del tile o hijo
+│   GetComponentInParent<BuildSlot>() → BuildSlot encontrado
+│   → TriggerSelect() → menú de torres abierto ✓
+│   → return (no llega a IsPointerOverGameObject)
+│
+└─ Physics.Raycast → golpea otra geometría (sin BuildSlot)
+    → IsPointerOverGameObject? 
+      → true (botón UI) → no cancelar ✓
+      → false (geometría vacía) → CancelBuildAction() ✓
+
+Toque en botón UI
+│
+├─ Physics.Raycast → NO golpea ningún BuildSlot
+│   (los botones son Canvas, invisibles para physics)
+└─ IsPointerOverGameObject = true → no cancelar ✓
+    EventSystem → despacha al botón ✓
+```
+
+### Fase 11 — Bug persistente Android: tercera ronda de diagnóstico (27/06/2026)
+
+**Síntoma:** el bug de la Fase 10 persistía incluso después de aplicar la v2.3. Los tiles seguían sin responder al toque en el APK, exclusivamente en los niveles; el menú y Start Wave continuaban funcionando.
+
+**Análisis exhaustivo de todos los puntos de fallo posibles:**
+
+Se trazó el flujo completo desde `TouchPhase.Began` hasta `TriggerSelect()` y se identificaron 4 causas posibles independientes que podían actuar en conjunto:
+
+**Causa A (raíz más probable) — `whatToIgnore` excluye la capa de los tiles:**
+
+`BuildManager.Update()` ejecutaba `Physics.Raycast(ray, out hit, Inf, ~whatToIgnore)`. El campo `whatToIgnore` es un `LayerMask` serializado configurado en el inspector de la escena. Si ese LayerMask incluía la capa "Default" (capa 0, la más común para tiles del nivel), `~whatToIgnore` excluía esa capa y el raycast **nunca golpeaba los tiles**. Como consecuencia, `TriggerSelect()` nunca era llamado. Este fallo es silencioso: no produce error en consola, simplemente no detecta nada.
+
+**Causa B — `BuildManager.currentGrid` no se actualizaba al cargar el nivel:**
+
+`BuildManager.UpdateBuildManager(WaveManager)` usaba `this.currentGrid`, que es el `GridBuilder` serializado en el inspector del MainScene. Este campo apuntaba al grid del nivel anterior o era null. Cuando `MakeBuildSlotNotAvalibleIfNeeded()` iteraba las oleadas para decidir qué slots deshabilitar, comparaba tiles de un grid incorrecto. Potencialmente podía deshabilitar slots correctos (`buildSlotAvalible = false`), haciendo que `TriggerSelect()` retornara silenciosamente en la primera línea.
+
+**Causa C — `MakeBuildSlotNotAvalibleIfNeeded()` sin guarda de null:**
+
+Si `currentGrid` era null y alguna oleada tenía `nextGrid != null`, la línea `currentGrid.GetTileSetup()` lanzaba `NullReferenceException`, cortando la coroutine de `LevelSetup.Start()` antes de que llamara a `EnableCameraConrolls(true)` y otras inicializaciones. El juego cargaba en estado incompleto.
+
+**Causa D — `TriggerSelect()` abortaba silenciosamente con `tileAnim == null`:**
+
+Si `TileAnimator.instance` resultaba null por cualquier razón de inicialización, el check `if (tileAnim == null || tileAnim.IsGridMoving()) return;` retornaba sin registro ni error.
+
+**Soluciones aplicadas (v2.4):**
+
+1. **`BuildManager.Update()` — raycast sin máscara de capa para detección de BuildSlots:**
+   ```csharp
+   // ANTES (v2.3): Physics.Raycast(ray, out buildHit, Infinity, ~whatToIgnore)
+   // DESPUÉS (v2.4):
+   Physics.Raycast(ray, out RaycastHit buildHit, Mathf.Infinity)  // sin restricción de capas
+   BuildSlot hitSlot = buildHit.collider.GetComponentInParent<BuildSlot>();
+   ```
+   El `whatToIgnore` solo se aplica cuando se trata de decidir si cancelar la selección (geometría de fondo), no para encontrar BuildSlots. Esto garantiza que los tiles se detecten sin importar su capa.
+
+2. **`BuildManager.UpdateBuildManager(WaveManager, GridBuilder)` — nuevo overload:**
+   ```csharp
+   public void UpdateBuildManager(WaveManager newWaveManager, GridBuilder newCurrentGrid)
+   {
+       currentGrid = newCurrentGrid;
+       MakeBuildSlotNotAvalibleIfNeeded(newWaveManager, currentGrid);
+   }
+   ```
+   `LevelSetup` llama `buildManager.UpdateBuildManager(myWaveManager, myMainGrid)` para que la comparación de tiles use el grid correcto del nivel activo.
+
+3. **`BuildManager.MakeBuildSlotNotAvalibleIfNeeded()` — guarda de null en `currentGrid`:**
+   ```csharp
+   if (currentGrid == null)
+   {
+       Debug.LogWarning("[BuildManager] currentGrid es null.");
+       return;
+   }
+   ```
+
+4. **`BuildSlot.TriggerSelect()` — logs de diagnóstico en cada condición de early return:**
+   Cada `return` prematuro ahora emite un `Debug.LogWarning` o `Debug.LogError` identificable en `adb logcat`, eliminando la posibilidad de fallos silenciosos.
+
+**Flujo final (v2.4):**
+
+```
+Toque en tile
+│
+└─ Physics.Raycast SIN máscara → SIEMPRE golpea el tile (cualquier capa)
+    GetComponentInParent<BuildSlot>() → BuildSlot encontrado
+    TriggerSelect()
+      buildSlotAvalible? → sí (grid correcto pasado a UpdateBuildManager)
+      isGridMoving?      → no (animación completada)
+      buildManager?      → sí (singleton válido)
+    → Slot seleccionado, menú de torres abierto ✓
+```
 
 - APK Android (build release) — enlace Google Drive: *(completar)*
 - Proyecto Unity: `C:\Proyectos\You-Shall-Not-Pass`

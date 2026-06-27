@@ -224,6 +224,19 @@ public class CameraController : MonoBehaviour
                 lastMousePosition = touch.position;
                 isTouchDraggingUI = UnityEngine.EventSystems.EventSystem.current != null && 
                                     UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId);
+
+                // Si el EventSystem no detectó un elemento UI pero el toque está sobre un BuildSlot 3D,
+                // bloqueamos el pan de cámara igualmente para que el jugador pueda seleccionar la casilla
+                // sin que la cámara se mueva (comportamiento esperado en móvil sin PhysicsRaycaster).
+                if (!isTouchDraggingUI && Camera.main != null)
+                {
+                    Ray ray = Camera.main.ScreenPointToRay(touch.position);
+                    if (Physics.Raycast(ray, out RaycastHit slotHit) &&
+                        slotHit.collider.GetComponentInParent<BuildSlot>() != null)
+                    {
+                        isTouchDraggingUI = true;
+                    }
+                }
             }
             else if (touch.phase == TouchPhase.Moved && !isTouchDraggingUI)
             {

@@ -1,5 +1,5 @@
 HIGH CONCEPT — You Shall Not Pass!
-Versión 2.1 — Entrega Final — 26/06/2026
+Versión 2.2 — Entrega Final — 26/06/2026
 
 Integrantes:
   Herrera, Oriana    — Project Manager · Artista 3D
@@ -336,9 +336,58 @@ BITÁCORA DE DESARROLLO
                             Además: GCLatencyMode=LowLatency, maximumDeltaTime=
                             0.05f, antiAliasing=0, HDR/MSAA desactivados en cámara.
 
-  Estado actual             Juego listo para entrega final. Tres niveles
-  26/06/2026                funcionales, sin bugs inhabilitantes, FPS estables
-                            en verde (≥60) en toda la sesión en TCL 408.
+  Bug crítico Android:          Síntoma: toque en tiles no abría menú de torres.
+  construcción de torres         Causa capa 1: BuildSlot usa IPointerDownHandler
+  26/06/2026                    que necesita PhysicsRaycaster para 3D objects.
+                                Causa capa 2 (raíz real): Canvas activo con
+                                GraphicRaycaster en pantalla hace que
+                                IsPointerOverGameObject devuelva true para TODO
+                                toque, bloqueando el fallback via Physics.Raycast
+                                antes de que se ejecute.
+                                Solución v2.3: BuildManager.Update reestructurado —
+                                Physics.Raycast se ejecuta PRIMERO sin pasar por
+                                IsPointerOverGameObject. Si golpea BuildSlot →
+                                TriggerSelect(). Solo si no golpea BuildSlot se
+                                consulta IsPointerOverGameObject para decidir si
+                                cancelar. GetComponent→GetComponentInParent en
+                                BuildManager y CameraController.
+
+  Bug Android persistente:      Síntoma idéntico a fase anterior, pero tras v2.3.
+  tercera ronda                 Análisis exhaustivo de 4 causas posibles:
+  27/06/2026
+                                A) whatToIgnore LayerMask incluía la capa de los
+                                   tiles → Physics.Raycast(~whatToIgnore) nunca
+                                   los detectaba (fallo SILENCIOSO, sin error).
+                                   Solución: raycast SIN máscara de capa para
+                                   la detección de BuildSlots; whatToIgnore solo
+                                   se usa para la lógica de cancelación.
+
+                                B) currentGrid en BuildManager no se actualizaba
+                                   al entrar al nivel → comparación de tiles con
+                                   grid incorrecto → BuildSlots marcados como
+                                   buildSlotAvalible=false → TriggerSelect abortaba.
+                                   Solución: nuevo overload UpdateBuildManager(
+                                   WaveManager, GridBuilder); LevelSetup lo llama
+                                   pasando myMainGrid.
+
+                                C) MakeBuildSlotNotAvalibleIfNeeded sin null-check
+                                   en currentGrid → NullReferenceException corta
+                                   LevelSetup.Start() antes de completar la init.
+                                   Solución: guarda temprana + LogWarning.
+
+                                D) TriggerSelect abortaba silenciosamente si
+                                   TileAnimator.instance era null.
+                                   Solución: LogWarning en cada return prematuro;
+                                   guard null en MoveTileUp y SnapToBeforeBuild.
+                                TriggerSelect(). Solo si no hay BuildSlot se
+                                consulta IsPointerOverGameObject para decidir si
+                                cancelar. GetComponentInParent para cubrir colliders
+                                en hijos del tile.
+
+  Estado actual                 Juego listo para entrega final. Tiles de
+  26/06/2026                    construcción operativos en Android, tres
+                                niveles funcionales, sin bugs inhabilitantes,
+                                FPS estables en verde (≥60) en TCL 408.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
