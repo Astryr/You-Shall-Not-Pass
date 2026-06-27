@@ -46,6 +46,10 @@ public class LevelSetup : MonoBehaviour
             buildManager?.UpdateBuildManager(myWaveManager, myMainGrid);
             yield return null;
 
+            // Garantizar PhysicsRaycaster en la cámara activa del nivel.
+            // Es posible que la cámara haya cambiado desde el arranque de la app.
+            MobileBootstrap.EnsurePhysicsRaycasterOnMainCamera();
+
             levelManager.UpdateCurrentGrid(myMainGrid);
 
             tileAnimator = FindFirstObjectByType<TileAnimator>();

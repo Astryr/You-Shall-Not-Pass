@@ -352,33 +352,28 @@ BITÁCORA DE DESARROLLO
                                 cancelar. GetComponent→GetComponentInParent en
                                 BuildManager y CameraController.
 
-  Bug Android persistente:      Síntoma idéntico a fase anterior, pero tras v2.3.
-  tercera ronda                 Análisis exhaustivo de 4 causas posibles:
-  27/06/2026
-                                A) whatToIgnore LayerMask incluía la capa de los
-                                   tiles → Physics.Raycast(~whatToIgnore) nunca
-                                   los detectaba (fallo SILENCIOSO, sin error).
-                                   Solución: raycast SIN máscara de capa para
-                                   la detección de BuildSlots; whatToIgnore solo
-                                   se usa para la lógica de cancelación.
+  Bug Android persistente:      Síntoma idéntico a fase anterior, pero tras v2.3
+  causa raíz real               y v2.4. Análisis del historial git confirmó que
+  27/06/2026                    PhysicsRaycaster NUNCA existió en ninguna escena.
+                                Sin él, el EventSystem no puede llamar
+                                OnPointerDown en objetos 3D (como los BuildSlots).
+                                Todos los intentos previos de fallback via
+                                BuildManager.Update() fallaron por distintas
+                                razones (IsPointerOverGameObject bloqueaba, o
+                                el layermask excluía la capa de los tiles).
 
-                                B) currentGrid en BuildManager no se actualizaba
-                                   al entrar al nivel → comparación de tiles con
-                                   grid incorrecto → BuildSlots marcados como
-                                   buildSlotAvalible=false → TriggerSelect abortaba.
-                                   Solución: nuevo overload UpdateBuildManager(
-                                   WaveManager, GridBuilder); LevelSetup lo llama
-                                   pasando myMainGrid.
-
-                                C) MakeBuildSlotNotAvalibleIfNeeded sin null-check
-                                   en currentGrid → NullReferenceException corta
-                                   LevelSetup.Start() antes de completar la init.
-                                   Solución: guarda temprana + LogWarning.
-
-                                D) TriggerSelect abortaba silenciosamente si
-                                   TileAnimator.instance era null.
-                                   Solución: LogWarning en cada return prematuro;
-                                   guard null en MoveTileUp y SnapToBeforeBuild.
+                                Solución v2.5 (definitiva):
+                                  MobileBootstrap.EnsurePhysicsRaycasterOnMainCamera()
+                                  agrega PhysicsRaycaster a Camera.main en runtime
+                                  (AfterSceneLoad). LevelSetup también lo llama
+                                  como fallback al cargar cada nivel.
+                                  Con PhysicsRaycaster presente:
+                                  - OnPointerDown en BuildSlot es disparado ✓
+                                  - IsPointerOverGameObject devuelve true para
+                                    tiles 3D y UI (correcto en ambos casos)
+                                  - CameraController no pan al tocar tiles ✓
+                                  - BuildManager.Update() solo cancela cuando
+                                    IsPointerOverGameObject = false (vacío) ✓
                                 TriggerSelect(). Solo si no hay BuildSlot se
                                 consulta IsPointerOverGameObject para decidir si
                                 cancelar. GetComponentInParent para cubrir colliders

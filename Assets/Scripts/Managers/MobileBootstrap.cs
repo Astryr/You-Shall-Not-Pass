@@ -62,6 +62,11 @@ public static class MobileBootstrap
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     private static void ApplyCameraSettings()
     {
+        // PhysicsRaycaster en la cámara principal: sin este componente el EventSystem
+        // nunca llama OnPointerDown en objetos 3D (como los BuildSlot tiles del nivel).
+        // Se añade aquí en runtime porque no está en la escena de forma estática.
+        EnsurePhysicsRaycasterOnMainCamera();
+
 #if UNITY_ANDROID && !UNITY_EDITOR
         Camera cam = Camera.main;
         if (cam != null)
@@ -72,5 +77,16 @@ public static class MobileBootstrap
             cam.allowMSAA = false;
         }
 #endif
+    }
+
+    /// <summary>
+    /// Agrega PhysicsRaycaster a la cámara principal si aún no lo tiene.
+    /// Se puede llamar varias veces de forma segura (el check previene duplicados).
+    /// </summary>
+    public static void EnsurePhysicsRaycasterOnMainCamera()
+    {
+        Camera cam = Camera.main;
+        if (cam != null && cam.GetComponent<UnityEngine.EventSystems.PhysicsRaycaster>() == null)
+            cam.gameObject.AddComponent<UnityEngine.EventSystems.PhysicsRaycaster>();
     }
 }
