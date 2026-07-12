@@ -57,11 +57,12 @@ public class FPSCounter : MonoBehaviour
         bg.raycastTarget = false;
 
         var panelRect = panel.GetComponent<RectTransform>();
-        // Centro-derecha de la pantalla
-        panelRect.anchorMin = new Vector2(1f, 0.5f);
-        panelRect.anchorMax = new Vector2(1f, 0.5f);
-        panelRect.pivot     = new Vector2(1f, 0.5f);
-        panelRect.anchoredPosition = new Vector2(-8f, 0f);
+        // Anclado al borde izquierdo, centro vertical, para evitar la cámara
+        // frontal del teléfono (que suele estar a la derecha en landscape).
+        panelRect.anchorMin = new Vector2(0f, 0.5f);
+        panelRect.anchorMax = new Vector2(0f, 0.5f);
+        panelRect.pivot     = new Vector2(0f, 0.5f);
+        panelRect.anchoredPosition = new Vector2(8f, 0f);
         panelRect.sizeDelta = new Vector2(100f, 34f);
 
         // Texto TMP dentro del panel

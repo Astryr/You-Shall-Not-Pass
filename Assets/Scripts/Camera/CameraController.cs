@@ -44,6 +44,11 @@ public class CameraController : MonoBehaviour
 
     private void Start()
     {
+        // Reforzar límites de zoom seguros en runtime para evitar que el jugador
+        // se salga del área visible (independientemente de los valores del inspector).
+        minZoom = Mathf.Max(minZoom, 4f);
+        maxZoom = Mathf.Min(maxZoom, 16f);
+
         targetZoomDist = Mathf.Clamp(
             Vector3.Distance(transform.position, GetVirtualFocusPoint()),
             minZoom, maxZoom);
@@ -95,8 +100,10 @@ public class CameraController : MonoBehaviour
             float prevMag = Vector2.Distance(t1Prev, t2Prev);
             float curMag  = Vector2.Distance(t1.position, t2.position);
 
-            // Pellizcar = alejar dedos = zoom in → delta positivo reduce distancia
-            delta = (prevMag - curMag) * zoomSpeed * 0.01f;
+            // 0.003f en lugar de 0.01f: reduce la sensibilidad del pinch ~70%.
+            // En un gesto rápido de 200px el delta por frame era ~20 unidades (cubriendo
+            // casi todo el rango min-max de un golpe). Ahora da ~6 unidades: manejable.
+            delta = (prevMag - curMag) * zoomSpeed * 0.003f;
         }
         else
         {
@@ -200,7 +207,8 @@ public class CameraController : MonoBehaviour
             targetPosition -= transform.right * movementSpeed * Time.deltaTime;
 
 
-        if (Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
+        if (maxDistanceFromCenter > 0.01f &&
+            Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
         {
             targetPosition = levelCenterPoint + (targetPosition - levelCenterPoint).normalized * maxDistanceFromCenter;
         }
@@ -240,7 +248,8 @@ public class CameraController : MonoBehaviour
 
                 Vector3 targetPosition = transform.position + moveRight + moveForawrd;
 
-                if (Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
+                if (maxDistanceFromCenter > 0.01f &&
+                    Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
                     targetPosition = levelCenterPoint + (targetPosition - levelCenterPoint).normalized * maxDistanceFromCenter;
 
 
@@ -268,7 +277,8 @@ public class CameraController : MonoBehaviour
             Vector3 targetPosition = transform.position + movememnt;
 
 
-            if (Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
+            if (maxDistanceFromCenter > 0.01f &&
+                Vector3.Distance(levelCenterPoint, targetPosition) > maxDistanceFromCenter)
             {
                 targetPosition = levelCenterPoint + (targetPosition - levelCenterPoint).normalized * maxDistanceFromCenter;
             }

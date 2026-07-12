@@ -1,5 +1,5 @@
 HIGH CONCEPT — You Shall Not Pass!
-Versión 2.2 — Entrega Final — 26/06/2026
+Versión 2.3 — Entrega Final — 12/07/2026
 
 Integrantes:
   Herrera, Oriana    — Project Manager · Artista 3D
@@ -83,7 +83,9 @@ CONTENIDO IMPLEMENTADO
     progreso, HUD in-game (Threat, moneda, oleada, FORCE WAVE), tutorial
     interactivo, botón de ayuda (?), pausa, pantallas de victoria/derrota,
     créditos, ajustes de audio y sensibilidad.
-    Contador de FPS permanente (verde ≥60 / amarillo 45-59 / rojo <45).
+    Contador de FPS permanente en el costado izquierdo de la pantalla
+    (verde ≥60 / amarillo 45-59 / rojo <45). Posicionado a la izquierda
+    para que la cámara frontal del teléfono (derecha en landscape) no lo tape.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -137,13 +139,40 @@ A) OPTIMIZACIÓN EN ENGINE / BUILD
     - cam.allowHDR = false: HDR requiere render targets de 16-32 bits por
       canal, aumentando el uso de memoria de GPU en el TCL 408.
 
-  GC Incremental (ProjectSettings)
+    GC Incremental (ProjectSettings)
     - gcIncremental: 1 ya estaba habilitado: el recolector de Unity
       distribuye el trabajo de GC en slices por frame en lugar de pausar.
 
   Minify Release + Managed Stripping (Low)
   Reduce el tamaño del APK eliminando bytecode no referenciado. El nivel
   "Low" de stripping es suficiente para no romper reflexión ni serializadores.
+
+  Skybox eliminado en Android (v2.3 — MobileBootstrap.cs)
+  Los niveles son entornos industriales cerrados; el fondo negro encaja con
+  la estética post-apocalíptica. Al setear clearFlags = SolidColor + black y
+  RenderSettings.skybox = null, se elimina el pase de renderizado del skybox
+  (-1 drawcall), y Unity no necesita samplear la cubemap de ambiente en runtime.
+  La iluminación bakeada no depende del skybox en runtime, así que no hay
+  pérdida visual en objetos estáticos con lightmap.
+
+  Far clip plane reducido: 1000 → 80 m (v2.3 — MobileBootstrap.cs)
+  El área de juego de cualquier nivel no supera ~30 u de diámetro.
+  Con la cámara hasta 16 u de altura, el far plane a 80 m cubre todo con margen.
+  Reducir el far clip plane mejora la precisión del z-buffer (menos z-fighting)
+  y reduce la carga de frustum culling al descartar antes la geometría lejana.
+
+  Auto-rotación landscape (v2.3 — MobileBootstrap.cs)
+  Antes: Screen.orientation = LandscapeRight (orientación fija).
+  Ahora: Screen.orientation = AutoRotation + LandscapeLeft/Right habilitados.
+  El jugador puede usar el teléfono con el cargador a cualquier lado sin que
+  la interfaz quede al revés. Portrait deshabilitado en ambos casos.
+
+  Zoom pinch calibrado (v2.3 — CameraController.cs)
+  El multiplicador de sensibilidad del gesto pinch se redujo de ×0.01 a ×0.003.
+  Antes, en un gesto de 200 px de delta el targetZoomDist saltaba 20 unidades
+  (cubriendo todo el rango min-max de una sola vez). Con el nuevo valor salta
+  ~6 unidades: suficiente para zoom rápido pero controlable para zoom fino.
+  Además se añaden límites en runtime: minZoom ≥ 4, maxZoom ≤ 16.
 
 ──────────────────────────────────────────────────────────────
 B) ILUMINACIÓN
@@ -219,30 +248,58 @@ D) MANEJO DE ASSETS
     loadInBackground = 1 hace que la lectura ocurra en un thread secundario
     sin bloquear el frame del menú o el nivel.
 
-    ADPCM + Decompress On Load (SFX cortos: ui_click_1, ui_onHover_1, sfx_beam_2)
-    Para sonidos de UI que se disparan al toque del usuario, la latencia de
-    decodificación importa. ADPCM decodifica en ~1 ms; Vorbis necesita 5-10 ms.
-    preloadAudioData = 1 asegura que el clip esté descomprimido en RAM desde
-    el inicio, sin ningún delay al reproducir.
-    forceToMono = 1: los SFX de UI no necesitan información estéreo.
-    Reducir a mono divide el tamaño en RAM a la mitad.
+    Vorbis + Decompress On Load (todos los SFX)
+    Todos los archivos de efectos usan Vorbis con Decompress On Load: el clip
+    se descomprime una sola vez al cargar la escena y queda en RAM como PCM.
+    Esto garantiza latencia de reproducción mínima al toque del usuario.
+    preloadAudioData = 1: el clip está listo antes del primer uso.
+    forceToMono = 1: los SFX de UI no necesitan información estéreo;
+    reducirlos a mono divide el tamaño en RAM a la mitad sin pérdida perceptible.
 
-    Vorbis + Decompress On Load (SFX medianos: sfx_beam_1, ui_click_2, ui_onHover_2)
-    Para clips > 30 KB, Vorbis ofrece mejor ratio de compresión que ADPCM
-    con calidad perceptiblemente igual. preloadAudioData = 1 y forceToMono = 1.
+    Archivos SFX afectados:
+    ui_click_1.mp3, ui_click_2.wav, ui_onHover_1.mp3, ui_onHover_2.wav,
+    sfx_beam_1.mp3, sfx_beam_2.mp3
 
-  TEXTURAS:
-    ETC2 (RGBA8) para todas las texturas Android: formato nativo de OpenGL ES 3.0,
-    decompresión en GPU sin overhead de CPU. Resolución máxima 1024 px para
-    modelos 3D y 512 px para UI (la UI no se acerca/aleja, no necesita mipmaps).
+  TEXTURAS — configuración de importación:
+    ETC2 (RGBA8) para todas las texturas Android (textureFormat: 47 en .meta):
+    formato nativo de OpenGL ES 3.0+, decompresión directa en GPU sin overhead
+    de CPU. Resolución máxima 1024 px para modelos 3D y 512 px para UI.
+    MipMaps habilitados en texturas 3D para reducir aliasing; desactivados en
+    UI (elementos 2D fijos en pantalla que no se alejan).
 
     Sprite Atlas: todos los iconos de las 7 torretas están en un único atlas.
     Esto reduce los draw calls del panel de construcción de 7 a 1.
 
+  MATERIALES — shaders y configuración:
+    Shader principal: Universal Render Pipeline/Lit (URP/Lit).
+    Justificación: URP/Lit permite recibir iluminación bakeada (lightmaps).
+    Los niveles tienen iluminación pre-calculada; sin Lit los modelos no
+    mostrarían las sombras bakeadas y perderían toda la profundidad visual.
+
+    Configuración optimizada aplicada a todos los materiales de juego:
+    - Sin mapas de normales (_BumpMap vacío): ahorrar 1 texture sample por
+      fragmento. El estilo low-poly no requiere detalle de relieve.
+    - Sin reflexiones de entorno (_GlossyReflections = 0): evitar el sample
+      de reflection probe por drawcall donde no aporta calidad visual.
+    - Opaque render type (_Surface = 0) para todos los materiales de juego
+      excepto Enemy_Transperent (sigiloso) y los de previsualización de torre.
+      La cola opaque es procesada sin blending, mucho más eficiente en GPU.
+    - GPU Instancing desactivado (m_EnableInstancingVariants = 0): los
+      objetos estáticos usan Static Batching de Unity, que es más eficiente
+      para geometría fija que el instancing manual.
+
+    Materiales especiales:
+    - Tiles_mat (1/2/3): sin textura, color sólido codificado en _BaseColor.
+      Cero bytes de textura, cero texture samplers en el shader.
+    - Emission_*.mat: color de emisión puro sin textura ni normal map.
+      Usado para señalización visual (radio de ataque, waypoints).
+    - Enemy_Transperent.mat: transparente, cola de render Transparent.
+      Solo aplicado al enemigo sigiloso.
+
   MODELOS 3D:
     Arte low-poly con geometría limpia (sin caras duplicadas, sin ngons).
-    Texturas de 512×512 por personaje/enemigo. Un solo material por tipo
-    de enemigo para aprovechar GPU instancing y minimizar state changes.
+    Un solo material por tipo de enemigo para aprovechar batching y minimizar
+    state changes en el render pipeline.
 
 ──────────────────────────────────────────────────────────────
 E) ACCESIBILIDAD
@@ -379,10 +436,27 @@ BITÁCORA DE DESARROLLO
                                 cancelar. GetComponentInParent para cubrir colliders
                                 en hijos del tile.
 
+  Bug Android persistente:      Síntoma idéntico a fase anterior. Análisis
+  causa raíz real               de historial git confirmó que PhysicsRaycaster
+  27/06/2026                    nunca existió en ninguna escena. Solución v2.5:
+                                MobileBootstrap.EnsurePhysicsRaycasterOnMainCamera()
+                                agrega PhysicsRaycaster en runtime (AfterSceneLoad).
+                                Con él, EventSystem llama OnPointerDown en tiles 3D.
+
+  Pulido final y correcciones   Zoom pinch reducido (×0.003), minZoom ≥ 4 /
+  de cámara y UX                maxZoom ≤ 16. Rotación auto entre ambos landscape.
+  12/07/2026                    FPS counter movido al costado izquierdo. Skybox
+                                eliminado en Android (SolidColor negro). Far clip
+                                plane reducido a 80 m. Bug de pan con
+                                maxDistanceFromCenter=0 corregido (guard >0.01f).
+                                Documentación actualizada: formatos de audio reales
+                                (Vorbis, no ADPCM), materiales y shaders detallados.
+
   Estado actual                 Juego listo para entrega final. Tiles de
-  26/06/2026                    construcción operativos en Android, tres
-                                niveles funcionales, sin bugs inhabilitantes,
-                                FPS estables en verde (≥60) en TCL 408.
+  12/07/2026                    construcción operativos en Android, tres niveles
+                                funcionales, sin bugs inhabilitantes, FPS estables
+                                en verde (≥60) en TCL 408, cámara contenida en
+                                límites del nivel.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

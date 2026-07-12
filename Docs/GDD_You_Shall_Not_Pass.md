@@ -1,7 +1,7 @@
 # GDD — You Shall Not Pass!
 
-**Versión:** 2.5 (entrega final)
-**Fecha:** 27/06/2026
+**Versión:** 2.6 (entrega final)
+**Fecha:** 12/07/2026
 **Motor:** Unity 6000.3.11f1 — Universal Render Pipeline (URP)
 **Plataforma:** Android — dispositivo de referencia: TCL 408 (720×1600 px, gama baja)
 
@@ -64,7 +64,7 @@ Inicio de nivel
 | Abrir tutorial/ayuda | Botón ? en HUD | Botón ? en HUD |
 | Pausa | F10 (solo editor) | Botón Pause en HUD |
 
-**Orientación fija:** landscape (horizontal). La rotación a portrait está bloqueada a nivel de Project Settings y forzada en runtime por `MobileBootstrap.cs` para evitar que la UI se rompa al girar el dispositivo.
+**Orientación:** landscape (horizontal) con auto-rotación habilitada entre **LandscapeLeft** y **LandscapeRight**. Si el jugador gira el teléfono 180°, la pantalla acompaña. La rotación a portrait está bloqueada a nivel de Project Settings y reforzada en runtime por `MobileBootstrap.cs`. El canvas escala correctamente en ambas orientaciones al ser `ScreenSpaceOverlay`.
 
 ---
 
@@ -123,7 +123,7 @@ El tutorial se puede reabrir en cualquier momento desde el HUD durante la partid
 - Las casillas donde se pueden construir torretas cambian visualmente al pasar el dedo sobre ellas (feedback de hover).
 - El HUD muestra en todo momento: Threat actual/máximo, recursos actuales, número de oleada y botón FORCE WAVE.
 - Victoria y derrota tienen pantallas de overlay dedicadas que ocultan el HUD para máxima claridad.
-- El contador de FPS en el centro-derecha usa colores: **verde** ≥60, **amarillo** 45-59, **rojo** <45.
+- El contador de FPS en el **costado izquierdo** (centro vertical) usa colores: **verde** ≥60, **amarillo** 45-59, **rojo** <45. Posicionado a la izquierda para evitar que la cámara frontal del teléfono (ubicada a la derecha en landscape) lo tape.
 
 ### Feedback de sonido (refuerzo positivo/negativo)
 
@@ -221,6 +221,8 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | **LOD Bias** | `0.7` en Android | Activa LODs de baja poli antes, reduciendo tris en GPU |
 | **MSAA desactivado** | `QualitySettings.antiAliasing = 0` + `cam.allowMSAA = false` | MSAA resuelve múltiples samples por pixel; en gama baja el costo supera el beneficio visual |
 | **HDR desactivado** | `cam.allowHDR = false` en Android | HDR necesita render target de 16-32 bits por canal; reduce significativamente la presión sobre la memoria de GPU |
+| **Skybox eliminado en Android** | `cam.clearFlags = SolidColor` + `cam.backgroundColor = black` + `RenderSettings.skybox = null` | Elimina el pase de renderizado del skybox (-1 drawcall). Los niveles son interiores/industriales; el fondo negro encaja con la estética y no hay pérdida visual. La iluminación bakeada no depende del skybox en runtime. |
+| **Far clip plane reducido** | `cam.farClipPlane = 80 m` (default era 1000 m) | El área de juego no supera ~30 u de ancho. Con la cámara a máx. 16 u de altura, 80 m cubre todo el nivel con margen; valores más altos solo añaden overdraw innecesario. |
 | **Bloom activo** | Con URP Performant | El Bloom en URP Performant es una pass liviana; se mantiene por calidad visual |
 
 ### 7.3 Físicas y código
@@ -237,26 +239,50 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 
 ### 7.4 Manejo de assets
 
-**Audio:**
+#### Audio — configuración de importación
 
-| Archivo | Formato | Load Type | Configuración | Justificación |
-|---------|---------|-----------|--------------|---------------|
-| `bg_example_1/2/3.mp3` | Vorbis | Streaming | `loadInBackground: 1` | BGM largo → streaming no carga todo en RAM; `loadInBackground` evita bloquear el hilo principal |
-| `ui_click_1.mp3`, `ui_onHover_1.mp3`, `sfx_beam_2.mp3` | ADPCM | Decompress On Load | `preloadAudioData: 1`, `forceToMono: 1` | SFX cortos → ADPCM decodifica instantáneamente; mono reduce RAM al 50% |
-| `sfx_beam_1.mp3`, `ui_click_2.wav`, `ui_onHover_2.wav` | Vorbis | Decompress On Load | `preloadAudioData: 1`, `forceToMono: 1` | SFX medianos → Vorbis da mejor compresión para tamaños > 30 KB |
+Todos los archivos de audio usan **Vorbis** como formato de compresión (verificado en los `.meta` de cada clip). A continuación la configuración exacta de cada tipo:
 
-**Por qué ADPCM para SFX cortos y no Vorbis:**
-Vorbis tiene mayor latencia de decodificación. En SFX de UI (clicks, hover) que se disparan al toque del usuario, una latencia de 5-10 ms es perceptible. ADPCM decodifica en 1 ms pero produce archivos más grandes; para clips de < 5 KB el trade-off es favorable.
+| Archivo | Formato | Load Type | `preloadAudioData` | `forceToMono` | `loadInBackground` | Justificación |
+|---------|---------|-----------|-------------------|--------------|-------------------|---------------|
+| `bg_example_1.mp3` `bg_example_2.mp3` `bg_example_3.mp3` | Vorbis (`compressionFormat: 1`) | **Streaming** (`loadType: 2`) | 0 | 0 | **1** | BGM de larga duración: el streaming decodifica en tiempo real y nunca ocupa más de un pequeño buffer en RAM. `loadInBackground: 1` evita que la primera lectura del disco bloquee el hilo principal. |
+| `ui_click_1.mp3` `ui_click_2.wav` `ui_onHover_1.mp3` `ui_onHover_2.wav` `sfx_beam_1.mp3` `sfx_beam_2.mp3` | Vorbis (`compressionFormat: 1`) | **Decompress On Load** (`loadType: 0`) | **1** | **1** | 0 | SFX cortos: se descomprimen una sola vez al cargar y quedan en RAM como PCM sin comprimir. Esto garantiza latencia mínima al dispararse (crítico para feedback táctil). `forceToMono: 1` descarta el canal derecho y reduce el uso de RAM al 50%. `preloadAudioData: 1` asegura que el clip esté en memoria antes de que se necesite. |
 
-**Texturas:**
+**Decisión técnica — por qué Vorbis para SFX cortos y no ADPCM:**
+Vorbis en modo Decompress On Load no tiene latencia de decodificación en runtime (se decodifica al cargar, no al reproducir). La desventaja (mayor tiempo de carga inicial) se compensa con `preloadAudioData: 1`. ADPCM produciría archivos 3-5× más grandes por clip sin ventaja perceptible en este caso.
 
-| Tipo | Formato | Tamaño máx | Configuración |
-|------|---------|-----------|--------------|
-| Texturas 3D terreno | ETC2 (RGBA8) | 1024 px | MipMaps habilitados |
-| Iconos de torretas UI | ETC2 (RGBA8) | 512 px | Sprite Atlas unificado |
-| UI general | ETC2 (RGBA8) | 512 px | MipMaps deshabilitados (UI 2D, no se aleja) |
+#### Texturas — configuración de importación
 
-**Sprite Atlas:** todos los iconos de las 7 torretas están en un único Sprite Atlas. Esto reduce los draw calls de la UI de 7 a 1 cuando el panel de construcción está abierto.
+| Tipo de asset | Formato Android | Tamaño máximo | MipMaps | Notas |
+|--------------|----------------|--------------|---------|-------|
+| Paleta de textura 3D (`TD_main_texture_palette.png`) | **ETC2 RGBA8** (`textureFormat: 47`) | 1024 px | ✅ habilitados | Textura atlas compartida por torrets, caminos y estructuras. ETC2 RGBA8 es el estándar de compresión nativo en OpenGL ES 3.0+, presente en todos los Android modernos. MipMaps habilitados para reducir aliasing con la cámara alejada. |
+| Iconos de torretas UI (Sprite Atlas) | ETC2 RGBA8 | 512 px | ❌ (UI fija en pantalla) | Agrupados en Sprite Atlas para reducir drawcalls. Sin mipmaps porque los sprites de UI no se escalan en profundidad. |
+| UI general (bordes, barras, botones) | ETC2 RGBA8 | 512 px | ❌ | Sin mipmaps; escalan solo en 2D con el canvas scaler. |
+| Texturas de VFX / efectos de partículas | ETC2 RGBA8 (Cartoon FX, Hovl Studio) | 1024 px | Según asset | Assets de terceros con sus propias configuraciones de compresión. Se mantienen las configuraciones originales para no romper los efectos visuales. |
+
+**Por qué ETC2 y no ASTC:**
+ETC2 es compatible con todos los dispositivos Android con OpenGL ES 3.0+, incluido el TCL 408 (Mediatek Helio A20). ASTC tiene mejor calidad de compresión pero requiere consulta de extensión en tiempo de carga; en dispositivos de gama baja puede caer a fallback sin compresión. ETC2 es el estándar seguro.
+
+#### Materiales — shaders y configuración
+
+| Material | Shader | Render Type | Textura | Configuración relevante |
+|----------|--------|------------|---------|------------------------|
+| `Main_mat.mat` | **URP/Lit** | Opaque | `TD_main_texture_palette.png` (1024px, ETC2) | Metallic 0.19, Smoothness 0.54, sin normal map. Recibe lightmaps (`m_LightmapFlags: 4`). Sin reflexiones de entorno (`_GlossyReflections: 0`) para ahorrar un sample de reflection probe por drawcall. |
+| `Tiles_mat.mat` / `Tiles_mat 1-3.mat` | **URP/Lit** | Opaque | Sin textura (color sólido) | Color base por variante (verde disponible, gris ocupado, rojo no disponible). Sin textura → cero bytes de textura en GPU, 0 texture samplers. Metallic 0, Smoothness 0.4. |
+| `Ground_Mat_1.mat` | **URP/Lit** | Opaque | — | Terreno base del mapa. Sin mapa normal para reducir el costo de píxel en fragmento shader. |
+| `Emission_*.mat` (blue, green, red, etc.) | **URP/Lit** | Opaque | Sin textura | Emisión de color puro para señalización (radio de ataque, previsualización, waypoints). Sin textura, sin normal map. El color de emisión es constante → sin costo de sample de textura. |
+| `Enemy_Transperent.mat` | **URP/Lit** | Transparent | — | Usado por el enemigo sigiloso (`Enemy_Stealth`). Renderiza en cola transparente; el alpha controla el nivel de invisibilidad. Más costoso que Opaque, pero solo se aplica a una unidad. |
+| `BuildPreview_Mat.mat` | **URP/Lit** | Transparent | — | Previsualización semitransparente de la torre antes de construirla. Solo existe durante la fase de selección. |
+| `AttackRadius_Mat.mat` | **URP/Lit** | Transparent | — | Círculo de rango de ataque de la torreta seleccionada. Solo visible al seleccionar un slot. |
+
+**Decisión técnica — por qué URP/Lit y no URP/Unlit:**
+El shader Lit de URP permite recibir iluminación bakeada (lightmaps), que es la fuente principal de luz en los niveles. Sin Lit, los modelos se verían sin sombras bakeadas, perdiendo la profundidad visual. URP/Lit con configuración mínima (sin normal maps, sin reflexiones, sin clearcoat) tiene un costo solo ligeramente mayor que Unlit pero mantiene compatibilidad total con el sistema de bake del proyecto.
+
+**Decisión técnica — GPU Instancing:**
+`m_EnableInstancingVariants: 0` (desactivado) en los materiales de tiles y de terreno. En este proyecto el número de materiales distintos es bajo y los objetos estáticos usan batching; el instancing manual no aporta mejora frente al Static Batching que Unity aplica automáticamente.
+
+**Sprite Atlas:**
+Todos los iconos de las 7 torretas están en un único Sprite Atlas. Esto reduce los draw calls de la UI de 7 a 1 cuando el panel de construcción está abierto. La policy es `Pack Together` (atlas cuadrado único, ninguna textura > 512px), compilado para `Android` target platform.
 
 ---
 
@@ -264,12 +290,12 @@ Vorbis tiene mayor latencia de decodificación. En SFX de UI (clicks, hover) que
 
 | Apartado | Estado | Evidencia |
 |----------|--------|-----------|
-| **Optimización en engine/off game (2/10)** | ✅ | IL2CPP/ARM64, async loading, backgroundLoadingPriority, object pool, URP Performant, minify |
-| **Iluminación (2/10)** | ✅ | `LevelEnvironmentOptimizer`: 1 luz direccional, sin puntuales/spot, shadow distance 15m, LOD bias 0.7 |
-| **Físicas (1/10)** | ✅ | Object pool (enemigos/proyectiles), NavMesh pre-baked, solver 4 iteraciones, TileSlot cached |
-| **Manejo de assets (2/10)** | ✅ | ETC2, Sprite Atlas, ADPCM/Vorbis justificado, loadInBackground, preloadAudioData |
-| **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras |
-| **Planificación (1/10)** | ✅ | Este GDD + bitácora detallada + High Concept con justificaciones técnicas |
+| **Optimización en engine/off game (2/10)** | ✅ | IL2CPP/ARM64, async loading, backgroundLoadingPriority, object pool, URP Performant, minify, skybox eliminado, far clip plane reducido, singleton managers, GC LowLatency |
+| **Iluminación (2/10)** | ✅ | `LevelEnvironmentOptimizer`: 1 luz direccional, sin puntuales/spot, shadow distance 15m, LOD bias 0.7, lightmaps bakeados en las 3 escenas, reflection probes por nivel |
+| **Físicas (1/10)** | ✅ | Object pool (enemigos/proyectiles/VFX), NavMesh pre-baked, solver 4 iteraciones, TileSlot cached, `PhysicsRaycaster` en cámara para input táctil sobre objetos 3D |
+| **Manejo de assets (2/10)** | ✅ | ETC2 RGBA8 para todas las texturas Android, Sprite Atlas para íconos de torretas, Vorbis/Streaming para BGM (loadInBackground), Vorbis/DecompressOnLoad para SFX (preloadAudioData, forceToMono), sin normal maps en materiales de juego, URP/Lit con configuración mínima; todo justificado en sección 7.4 |
+| **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras, FPS counter en costado izquierdo libre de notch, auto-rotación entre ambos landscape, controles táctiles funcionales verificados en APK |
+| **Planificación (1/10)** | ✅ | Este GDD v2.6 con bitácora de 12 fases + High Concept con justificaciones técnicas completas; todos los integrantes figuran en la portada y en créditos in-game |
 
 ---
 
@@ -477,6 +503,26 @@ Toque en zona vacía (sin collider ni UI)
 ├─ IsPointerOverGameObject = false
 └─ BuildManager.Update → CancelBuildAction ✓
 ```
+
+### Fase 12 — Pulido final y correcciones de cámara / UX (12/07/2026)
+
+Revisión integral del proyecto. Cambios implementados:
+
+**Zoom excesivo en móvil:** el gesto de pinch con dos dedos podía cubrir todo el rango min-max de zoom en menos de 0.2 segundos porque el multiplicador de sensibilidad era `zoomSpeed * 0.01f`. Con `zoomSpeed = 10`, en un gesto rápido de 200px de delta el `targetZoomDist` saltaba +20 unidades en un frame, más que el rango total. **Solución:** reducir el multiplicador a `0.003f`, lo que da un delta de ~6 unidades para el mismo gesto: control fino y predecible.
+
+**Límites de zoom:** se añade clamping en `CameraController.Start()` que fuerza `minZoom ≥ 4` y `maxZoom ≤ 16` en runtime, como salvaguarda independiente de lo que esté configurado en el inspector. Esto impide que el jugador se "meta dentro" del suelo (zoom mínimo demasiado bajo) o que la cámara se eleve tan alto que el mapa desaparezca del campo visual.
+
+**Bug de pan sin límite cuando `maxDistanceFromCenter = 0`:** `HandleMovement()` y `HandleMouseMovement()` verificaban `Distance > maxDistanceFromCenter` sin el guard `> 0.01f`. Si el inspector tenía el campo a 0 (default de Unity para floats), la comparación `Distance > 0` era casi siempre true y forzaba la cámara a `levelCenterPoint` (0,0,0), bloqueando el pan. **Solución:** añadir `maxDistanceFromCenter > 0.01f &&` igual que en `ApplyZoom()`.
+
+**Rotación de pantalla a ambos lados landscape:** `Screen.orientation = ScreenOrientation.LandscapeRight` fijaba la orientación a un solo lado, ignorando el `autorotateToLandscapeLeft = true`. **Solución:** cambiar a `Screen.orientation = ScreenOrientation.AutoRotation` con portrait y portrait-upsidedown desactivados. El jugador ahora puede usar el teléfono con el cargador a cualquier lado.
+
+**Contador FPS tapado por la cámara del teléfono:** en landscape, la cámara frontal de muchos Android está en el borde derecho. El panel de FPS estaba anclado a la derecha (`anchorMin.x = 1f`). **Solución:** mover a la izquierda (`anchorMin.x = 0f`, `anchoredPosition.x = 8f`). Zona libre de notch en la totalidad de los dispositivos testados.
+
+**Skybox eliminado en Android:** la escena tenía asignado el material `Skybox.mat` en `RenderSettings`, lo que añade un pase de renderizado del cielo detrás de toda la geometría. Como los niveles son industriales cerrados y el fondo negro encaja con la estética, se aplica en runtime: `cam.clearFlags = SolidColor`, `cam.backgroundColor = black`, `RenderSettings.skybox = null`. Reducción de 1 drawcall completo por frame.
+
+**Far clip plane:** la distancia de dibujado estaba al default de Unity (1000 m). Los niveles del juego ocupan ~30 u de diámetro; con la cámara a máximo 16 u de altura, nunca es necesario dibujar a más de 80 m. Se aplica `cam.farClipPlane = 80f` en `MobileBootstrap.ApplyCameraSettings()`. Esto reduce el número de objetos evaluados en el frustum culling y puede mejorar el z-buffer precision.
+
+---
 
 - APK Android (build release) — enlace Google Drive: *(completar)*
 - Proyecto Unity: `C:\Proyectos\You-Shall-Not-Pass`

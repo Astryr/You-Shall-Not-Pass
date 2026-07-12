@@ -41,7 +41,9 @@ public static class MobileBootstrap
         Screen.autorotateToPortraitUpsideDown = false;
         Screen.autorotateToLandscapeLeft = true;
         Screen.autorotateToLandscapeRight = true;
-        Screen.orientation = ScreenOrientation.LandscapeRight;
+        // AutoRotation permite girar el teléfono hacia ambos lados landscape
+        // (LandscapeLeft y LandscapeRight). El retrato queda completamente deshabilitado.
+        Screen.orientation = ScreenOrientation.AutoRotation;
 
         // Performant = índice 0 en QualitySettings del proyecto.
         if (QualitySettings.GetQualityLevel() != 0)
@@ -75,7 +77,20 @@ public static class MobileBootstrap
             cam.allowHDR  = false;
             // MSAA en la cámara es redundante si ya está desactivado en QualitySettings.
             cam.allowMSAA = false;
+
+            // Fondo negro sólido: elimina el pase de renderizado del Skybox (-1 drawcall).
+            cam.clearFlags      = CameraClearFlags.SolidColor;
+            cam.backgroundColor = Color.black;
+
+            // Distancia de dibujado reducida de 1000 a 80 unidades.
+            // Los niveles de tower defense no superan ~30 u de ancho; 80 cubre
+            // la cámara elevada con margen sin desperdiciar GPU en geometría lejana.
+            cam.farClipPlane = 80f;
         }
+
+        // Eliminar la referencia al material Skybox en runtime para que Unity
+        // no procese ni dibuje el fondo celestial en ningún frame.
+        RenderSettings.skybox = null;
 #endif
     }
 
