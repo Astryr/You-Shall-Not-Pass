@@ -49,6 +49,12 @@ public static class MobileBootstrap
         if (QualitySettings.GetQualityLevel() != 0)
             QualitySettings.SetQualityLevel(0, applyExpensiveChanges: true);
 
+        // Forzar render scale a 0.75 en runtime como garantía: si el URP asset
+        // guardado en el build tiene un valor distinto, este setter lo sobreescribe.
+        // 0.75 = renderizar al 75% de la resolución nativa → menor carga de fill rate.
+        if (QualitySettings.renderPipeline is UnityEngine.Rendering.Universal.UniversalRenderPipelineAsset urpAsset)
+            urpAsset.renderScale = 0.75f;
+
         // Reducir distancia de sombras en Android para aliviar GPU.
         QualitySettings.shadowDistance = 15f;
 

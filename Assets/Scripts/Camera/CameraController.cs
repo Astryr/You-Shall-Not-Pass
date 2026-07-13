@@ -231,11 +231,20 @@ public class CameraController : MonoBehaviour
             {
                 lastMousePosition = touch.position;
 
-                // Con PhysicsRaycaster en la cámara, IsPointerOverGameObject devuelve true
-                // tanto para botones de UI como para objetos 3D (BuildSlots, path tiles, etc.).
-                // Esto bloquea el pan de cámara correctamente en ambos casos.
                 isTouchDraggingUI = UnityEngine.EventSystems.EventSystem.current != null &&
                                     UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touch.fingerId);
+
+                // Fallback manual: si el EventSystem no detectó objetos 3D
+                // (PhysicsRaycaster inactivo o no configurado en la cámara),
+                // verificar directamente si el toque cayó sobre un BuildSlot.
+                // Evita que la cámara haga pan al tocar una casilla de construcción.
+                if (!isTouchDraggingUI && Camera.main != null)
+                {
+                    Ray r = Camera.main.ScreenPointToRay(touch.position);
+                    if (Physics.Raycast(r, out RaycastHit rHit, Mathf.Infinity) &&
+                        rHit.collider.GetComponentInParent<BuildSlot>() != null)
+                        isTouchDraggingUI = true;
+                }
             }
             else if (touch.phase == TouchPhase.Moved && !isTouchDraggingUI)
             {

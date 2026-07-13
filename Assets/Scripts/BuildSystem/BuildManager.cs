@@ -79,16 +79,29 @@ public class BuildManager : MonoBehaviour
         if (!hasInput || isMouseOverUI || Camera.main == null)
             return;
 
-        // Con PhysicsRaycaster en la cámara, el EventSystem detecta tanto objetos 3D (BuildSlots)
-        // como botones de UI. Si IsPointerOverGameObject devuelve true, el EventSystem ya despachó
-        // el evento al objeto correspondiente (OnPointerDown en BuildSlot o en UI_BuildButton).
-        // BuildManager.Update solo debe CANCELAR cuando el toque cae en el vacío.
-        bool overAnyObject = UnityEngine.EventSystems.EventSystem.current != null &&
-                             (touchFingerId >= 0
-                                 ? UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touchFingerId)
-                                 : UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject());
+        // Mecanismo principal de selección: Physics.Raycast directo desde la cámara.
+        // Este camino es el más confiable en Android porque NO depende del EventSystem
+        // ni del PhysicsRaycaster en la cámara (que en algunos dispositivos/builds
+        // puede no despachar OnPointerDown a objetos 3D correctamente).
+        Ray ray = Camera.main.ScreenPointToRay(inputPosition);
+        if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+        {
+            BuildSlot slot = hit.collider.GetComponentInParent<BuildSlot>();
+            if (slot != null)
+            {
+                slot.TriggerSelect();
+                return; // Evento ya procesado; no cancelar.
+            }
+        }
 
-        if (!overAnyObject)
+        // El toque NO golpeó un BuildSlot. Solo cancelar si tampoco cayó sobre UI
+        // (para no cerrar el menú de torres al presionar sus botones).
+        bool overUI = UnityEngine.EventSystems.EventSystem.current != null &&
+                      (touchFingerId >= 0
+                          ? UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject(touchFingerId)
+                          : UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject());
+
+        if (!overUI)
             CancelBuildAction();
     }
 

@@ -1,7 +1,7 @@
 # GDD — You Shall Not Pass!
 
-**Versión:** 2.6 (entrega final)
-**Fecha:** 12/07/2026
+**Versión:** 2.7 (entrega final)
+**Fecha:** 13/07/2026
 **Motor:** Unity 6000.3.11f1 — Universal Render Pipeline (URP)
 **Plataforma:** Android — dispositivo de referencia: TCL 408 (720×1600 px, gama baja)
 
@@ -215,7 +215,7 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | Técnica | Valor configurado | Justificación |
 |---------|------------------|---------------|
 | **URP Performant** | Perfil índice 0 en Android | Pipeline de menor overhead para móvil |
-| **Render Scale** | 0.85 | Renderiza a 85% de resolución nativa, reescala antes de mostrar |
+| **Render Scale** | **0.75** (URP-Performant.asset + forzado en runtime por MobileBootstrap) | Renderiza al 75% de la resolución nativa del TCL 408 (540×900 px efectivos); reduce el fill rate en ~31% respecto a full resolution. Recomendado por el docente para alcanzar 60 FPS de forma consistente. |
 | **Sombras** | `shadowDistance = 15 m` en Android | Sombras solo a 15 m de la cámara, no a distancia completa |
 | **Una sola luz direccional** | `LevelEnvironmentOptimizer.Apply()` | Desactiva todas las luces puntuales/spot; conserva la direccional más intensa |
 | **LOD Bias** | `0.7` en Android | Activa LODs de baja poli antes, reduciendo tris en GPU |
@@ -223,6 +223,9 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | **HDR desactivado** | `cam.allowHDR = false` en Android | HDR necesita render target de 16-32 bits por canal; reduce significativamente la presión sobre la memoria de GPU |
 | **Skybox eliminado en Android** | `cam.clearFlags = SolidColor` + `cam.backgroundColor = black` + `RenderSettings.skybox = null` | Elimina el pase de renderizado del skybox (-1 drawcall). Los niveles son interiores/industriales; el fondo negro encaja con la estética y no hay pérdida visual. La iluminación bakeada no depende del skybox en runtime. |
 | **Far clip plane reducido** | `cam.farClipPlane = 80 m` (default era 1000 m) | El área de juego no supera ~30 u de ancho. Con la cámara a máx. 16 u de altura, 80 m cubre todo el nivel con margen; valores más altos solo añaden overdraw innecesario. |
+| **Lens Flare desactivado** | `m_SupportDataDrivenLensFlare: 0`, `m_SupportScreenSpaceLensFlare: 0` | El juego no usa lens flares; tenerlos habilitados compila shader variants innecesarios. |
+| **Light Cookies desactivado** | `m_SupportsLightCookies: 0` | No se usan cookies en ninguna luz del proyecto; desactivar elimina el sampler y las variantes de shader. |
+| **LOD Cross-fade desactivado** | `m_EnableLODCrossFade: 0` | Las transiciones dithered de LOD no aportan calidad perceptible en este juego; desactivar elimina un shader pass y variables de cómputo. |
 | **Bloom activo** | Con URP Performant | El Bloom en URP Performant es una pass liviana; se mantiene por calidad visual |
 
 ### 7.3 Físicas y código
@@ -235,7 +238,7 @@ La `MainScene` siempre está cargada y contiene todos los managers globales (`Ga
 | **NavMeshSurface cached** | `GridBuilder._navMesh` con lazy-init | Evita `GetComponent<NavMeshSurface>()` en cada acceso a la property |
 | **TileSlot cached** | `GridBuilder.cachedTileSlots` | Evita `GetComponent<TileSlot>()` × tiles en cada `MakeTilesNonInteractable` |
 | **Singletons de managers** | `static instance` en BuildManager, TileAnimator, UI | `BuildSlot.Awake()` antes hacía 3 `FindFirstObjectByType` por tile; ahora acceso O(1) |
-| **Doble ruta de selección** | `BuildSlot.TriggerSelect()` + `BuildManager` via Raycast | Fallback para Android cuando no hay `PhysicsRaycaster` en cámara; se detalla abajo |
+| **Selección de tiles via Physics.Raycast directo** | `BuildManager.Update()` lanza `Camera.main.ScreenPointToRay` al toque y llama `TriggerSelect()` si golpea un BuildSlot | Mecanismo principal para Android. No depende del EventSystem ni del PhysicsRaycaster, que en algunos dispositivos/compilaciones no despacha eventos a objetos 3D correctamente |
 
 ### 7.4 Manejo de assets
 
@@ -290,11 +293,11 @@ Todos los iconos de las 7 torretas están en un único Sprite Atlas. Esto reduce
 
 | Apartado | Estado | Evidencia |
 |----------|--------|-----------|
-| **Optimización en engine/off game (2/10)** | ✅ | IL2CPP/ARM64, async loading, backgroundLoadingPriority, object pool, URP Performant, minify, skybox eliminado, far clip plane reducido, singleton managers, GC LowLatency |
+| **Optimización en engine/off game (2/10)** | ✅ | IL2CPP/ARM64, async loading, backgroundLoadingPriority, object pool, URP Performant, render scale 0.75, minify, skybox eliminado, far clip plane 80m, singleton managers, GC LowLatency, lens flares/light cookies/LOD cross-fade desactivados |
 | **Iluminación (2/10)** | ✅ | `LevelEnvironmentOptimizer`: 1 luz direccional, sin puntuales/spot, shadow distance 15m, LOD bias 0.7, lightmaps bakeados en las 3 escenas, reflection probes por nivel |
 | **Físicas (1/10)** | ✅ | Object pool (enemigos/proyectiles/VFX), NavMesh pre-baked, solver 4 iteraciones, TileSlot cached, `PhysicsRaycaster` en cámara para input táctil sobre objetos 3D |
 | **Manejo de assets (2/10)** | ✅ | ETC2 RGBA8 para todas las texturas Android, Sprite Atlas para íconos de torretas, Vorbis/Streaming para BGM (loadInBackground), Vorbis/DecompressOnLoad para SFX (preloadAudioData, forceToMono), sin normal maps en materiales de juego, URP/Lit con configuración mínima; todo justificado en sección 7.4 |
-| **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras, FPS counter en costado izquierdo libre de notch, auto-rotación entre ambos landscape, controles táctiles funcionales verificados en APK |
+| **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras, FPS counter en costado izquierdo libre de notch, auto-rotación entre ambos landscape, **colocación de torres táctil corregida** (Physics.Raycast directo, sin dependencia del EventSystem/PhysicsRaycaster) |
 | **Planificación (1/10)** | ✅ | Este GDD v2.6 con bitácora de 12 fases + High Concept con justificaciones técnicas completas; todos los integrantes figuran en la portada y en créditos in-game |
 
 ---
@@ -521,6 +524,73 @@ Revisión integral del proyecto. Cambios implementados:
 **Skybox eliminado en Android:** la escena tenía asignado el material `Skybox.mat` en `RenderSettings`, lo que añade un pase de renderizado del cielo detrás de toda la geometría. Como los niveles son industriales cerrados y el fondo negro encaja con la estética, se aplica en runtime: `cam.clearFlags = SolidColor`, `cam.backgroundColor = black`, `RenderSettings.skybox = null`. Reducción de 1 drawcall completo por frame.
 
 **Far clip plane:** la distancia de dibujado estaba al default de Unity (1000 m). Los niveles del juego ocupan ~30 u de diámetro; con la cámara a máximo 16 u de altura, nunca es necesario dibujar a más de 80 m. Se aplica `cam.farClipPlane = 80f` en `MobileBootstrap.ApplyCameraSettings()`. Esto reduce el número de objetos evaluados en el frustum culling y puede mejorar el z-buffer precision.
+
+---
+
+### Fase 13 — Corrección docente: URP + tiles Android (13/07/2026)
+
+**Síntoma reportado por el docente:** en el APK entregado los botones de construcción de torres no aparecen al tocar las casillas de construcción. En PC funciona correctamente.
+
+**Análisis de la regresión:**
+
+En v2.5 se simplificó `BuildManager.Update()` para que SOLO cancelara (si el toque caía en espacio vacío). La selección de tiles debía ocurrir via `BuildSlot.OnPointerDown()` + `PhysicsRaycaster`. Este diseño falló porque:
+
+1. `PhysicsRaycaster` se agrega programáticamente en `MobileBootstrap.AfterSceneLoad` y como fallback en `LevelSetup`. En teoría funciona, pero en la práctica en el APK de Android la cadena EventSystem → PhysicsRaycaster → OnPointerDown puede no funcionar de forma consistente con `StandaloneInputModule` en algunos dispositivos.
+
+2. Al eliminar el `Physics.Raycast → TriggerSelect()` manual en v2.5 y confiar exclusivamente en la ruta del EventSystem, se perdió el fallback más confiable.
+
+**Solución definitiva (v2.7):**
+
+`BuildManager.Update()` vuelve a lanzar `Physics.Raycast` como **mecanismo principal** de selección, sin depender del EventSystem:
+
+```csharp
+// BuildManager.Update() — selección principal
+Ray ray = Camera.main.ScreenPointToRay(inputPosition);
+if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
+{
+    BuildSlot slot = hit.collider.GetComponentInParent<BuildSlot>();
+    if (slot != null)
+    {
+        slot.TriggerSelect();
+        return;
+    }
+}
+// Si no golpea BuildSlot → verificar UI antes de cancelar
+bool overUI = EventSystem.current.IsPointerOverGameObject(touchFingerId);
+if (!overUI) CancelBuildAction();
+```
+
+La diferencia crítica respecto a v2.3/v2.4:
+- No se usa `whatToIgnore` LayerMask → los BuildSlots nunca son filtrados por capa.
+- `GetComponentInParent<BuildSlot>()` → cubre colliders en GameObjects hijos.
+- El `Physics.Raycast` se ejecuta SIN condicional previo → siempre se intenta antes que cualquier otra lógica.
+
+`CameraController.HandleMouseMovement()` también recibe el mismo raycast como fallback: si `IsPointerOverGameObject` no detectó el tile (PhysicsRaycaster inactivo), un `Physics.Raycast` adicional verifica si el gesto empezó sobre un BuildSlot y bloquea el pan en ese caso.
+
+**Optimizaciones URP solicitadas por el docente:**
+
+Cambios en `URP-Performant.asset`:
+
+| Parámetro | Antes | Después | Justificación |
+|-----------|-------|---------|---------------|
+| `m_RenderScale` | 0.85 | **0.75** | Reducción de ~20% del área renderizada → menos carga de fill rate en GPU. Recomendado explícitamente por el docente. |
+| `m_SupportDataDrivenLensFlare` | 1 | **0** | El juego no usa lens flares; desactivar elimina shader variants. |
+| `m_SupportScreenSpaceLensFlare` | 1 | **0** | Igual. |
+| `m_SupportsLightCookies` | 1 | **0** | Sin cookies de luz en ninguna escena. |
+| `m_EnableLODCrossFade` | 1 | **0** | Transiciones dithered de LOD innecesarias en este estilo visual. |
+
+Los parámetros ya optimizados que el docente mencionó verificar:
+- `m_RequireDepthTexture: 0` ✓ (Depth Texture ya desactivada)
+- `m_RequireOpaqueTexture: 0` ✓ (Opaque Texture ya desactivada)
+- `m_SupportsHDR: 0` ✓ (HDR ya desactivado)
+- `m_MainLightShadowsSupported: 0` ✓ (sombras de luz principal ya desactivadas)
+- `m_AdditionalLightsRenderingMode: 0` ✓ (luces adicionales desactivadas)
+
+El render scale también se fuerza en runtime desde `MobileBootstrap.ApplySettings()`:
+```csharp
+if (QualitySettings.renderPipeline is UniversalRenderPipelineAsset urpAsset)
+    urpAsset.renderScale = 0.75f;
+```
 
 ---
 

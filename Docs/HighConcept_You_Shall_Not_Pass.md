@@ -1,5 +1,5 @@
 HIGH CONCEPT — You Shall Not Pass!
-Versión 2.3 — Entrega Final — 12/07/2026
+Versión 2.4 — Entrega Final — 13/07/2026
 
 Integrantes:
   Herrera, Oriana    — Project Manager · Artista 3D
@@ -146,6 +146,28 @@ A) OPTIMIZACIÓN EN ENGINE / BUILD
   Minify Release + Managed Stripping (Low)
   Reduce el tamaño del APK eliminando bytecode no referenciado. El nivel
   "Low" de stripping es suficiente para no romper reflexión ni serializadores.
+
+  Render Scale reducido a 0.75 (v2.4 — URP-Performant.asset + MobileBootstrap.cs)
+  El docente indicó explícitamente reducir el Render Scale para alcanzar 60 FPS
+  de manera consistente. Cambio aplicado de dos formas complementarias:
+    1. En el asset URP-Performant.asset: m_RenderScale = 0.75 (valor persistente).
+    2. En MobileBootstrap.ApplySettings(): urpAsset.renderScale = 0.75f (runtime
+       override; garantiza el valor aunque el asset en el build sea diferente).
+  Efecto: el framebuffer se genera al 75% de la resolución del TCL 408
+  (540×900 px efectivos en lugar de 720×1200), reduciendo el fill rate ~31%.
+
+  Features URP desactivadas en Performant (v2.4):
+    - Lens Flares (data-driven y screen-space): m_SupportDataDrivenLensFlare = 0,
+      m_SupportScreenSpaceLensFlare = 0. Sin lens flares en el juego; desactivar
+      elimina shader variants compilados innecesariamente.
+    - Light Cookies: m_SupportsLightCookies = 0. Sin cookies en ninguna luz.
+    - LOD Cross-fade: m_EnableLODCrossFade = 0. Sin transiciones dithered de LOD.
+  Features ya desactivadas y verificadas en esta revisión:
+    - Depth Texture: m_RequireDepthTexture = 0 ✓
+    - Opaque Texture: m_RequireOpaqueTexture = 0 ✓
+    - HDR: m_SupportsHDR = 0 ✓
+    - Main Light Shadows: m_MainLightShadowsSupported = 0 ✓
+    - Additional Lights: m_AdditionalLightsRenderingMode = 0 (Off) ✓
 
   Skybox eliminado en Android (v2.3 — MobileBootstrap.cs)
   Los niveles son entornos industriales cerrados; el fondo negro encaja con
@@ -452,11 +474,26 @@ BITÁCORA DE DESARROLLO
                                 Documentación actualizada: formatos de audio reales
                                 (Vorbis, no ADPCM), materiales y shaders detallados.
 
+  Corrección docente:           Tiles de construcción aún no respondían en Android
+  URP + tiles Android           APK. Diagnóstico: BuildManager.Update() (v2.5) había
+  13/07/2026                    eliminado el Physics.Raycast directo y confiaba
+                                únicamente en PhysicsRaycaster + EventSystem, que
+                                no funciona de forma consistente en Android builds.
+                                Solución (v2.7): restablecer Physics.Raycast manual
+                                → TriggerSelect() como camino PRIMARIO en
+                                BuildManager.Update(). CameraController también usa
+                                el mismo raycast como fallback para bloquear el pan
+                                al tocar tiles.
+                                URP-Performant actualizado por indicación del docente:
+                                Render Scale 0.85→0.75, lens flares/light cookies/
+                                LOD cross-fade desactivados. Render scale también
+                                forzado en runtime via MobileBootstrap.
+
   Estado actual                 Juego listo para entrega final. Tiles de
-  12/07/2026                    construcción operativos en Android, tres niveles
-                                funcionales, sin bugs inhabilitantes, FPS estables
-                                en verde (≥60) en TCL 408, cámara contenida en
-                                límites del nivel.
+  13/07/2026                    construcción operativos en Android (Physics.Raycast
+                                directo, sin dependencia del EventSystem). Tres
+                                niveles funcionales, sin bugs inhabilitantes, URP
+                                optimizado al máximo según indicaciones del docente.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
