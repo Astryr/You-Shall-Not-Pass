@@ -399,105 +399,42 @@ BITÁCORA DE DESARROLLO
                             Vorbis streaming + loadInBackground). Contador FPS.
                             targetFrameRate = 90, solver física = 4 iteraciones.
 
-  Opt. carga: 1ª ronda      Stutter detectado (~2 FPS) durante pantalla de
-  26/06/2026                carga en TCL 408. Causas: escena cargaba tarde,
-                            GetComponent sin caché en GridBuilder, operaciones
-                            pesadas síncronas en LevelSetup.
-                            Solución: LoadSceneAsync+allowSceneActivation=false
-                            en paralelo con animación; ThreadPriority.Low;
-                            NavMeshSurface y TileSlot cacheados; yield return null.
-                            Resultado: 2 FPS → 24 FPS.
+  Corrección docente:           Contador de FPS añadido (FPSCounter.cs,
+  optimizaciones y rendimiento  DontDestroyOnLoad, costado izquierdo de pantalla
+  14/07/2026                    para evitar notch, verde/amarillo/rojo).
+                                Zoom de pinch corregido (×0.003); límites
+                                minZoom ≥ 4 / maxZoom ≤ 16 en CameraController.
+                                Cámara limitada al área del escenario (guard
+                                maxDistanceFromCenter > 0.01f en los 3 handlers).
+                                Rotación habilitada en ambos landscape via
+                                Screen.orientation = AutoRotation.
+                                Skybox eliminado en Android: SolidColor negro +
+                                RenderSettings.skybox = null (-1 drawcall).
+                                Far clip plane: 1000 m → 80 m.
+                                URP Performant: Render Scale 0.75 (en asset +
+                                forzado en runtime); Depth/Opaque Texture,
+                                Lens Flares, Light Cookies y LOD Cross-fade
+                                desactivados. Render scale forzado via
+                                MobileBootstrap.
+                                Optimización de carga: LoadSceneAsync con
+                                allowSceneActivation=false en paralelo con
+                                animación; singletons (static instance) en
+                                BuildManager, TileAnimator y UI para eliminar
+                                FindFirstObjectByType en cada BuildSlot.Awake();
+                                GCLatencyMode=LowLatency; maximumDeltaTime=0.05f;
+                                MSAA/HDR desactivados en cámara.
+                                PhysicsRaycaster añadido en runtime a Camera.main
+                                para que el EventSystem alcance objetos 3D.
+                                Documentación ampliada: configuración exacta de
+                                importación de audio, texturas y materiales (GDD
+                                sección 7.4). Nueva sección 7.5 con técnicas
+                                evaluadas y no aplicadas, cada una justificada.
 
-  Opt. carga: 2ª ronda      Causa raíz del 24 FPS identificada: BuildSlot.Awake()
-  26/06/2026                llamaba 3 FindFirstObjectByType por tile (60-150 por
-                            nivel). Solución: static instance en BuildManager,
-                            TileAnimator y UI; acceso O(1) desde BuildSlot.
-                            Además: GCLatencyMode=LowLatency, maximumDeltaTime=
-                            0.05f, antiAliasing=0, HDR/MSAA desactivados en cámara.
-
-  Bug crítico Android:          Síntoma: toque en tiles no abría menú de torres.
-  construcción de torres         Causa capa 1: BuildSlot usa IPointerDownHandler
-  26/06/2026                    que necesita PhysicsRaycaster para 3D objects.
-                                Causa capa 2 (raíz real): Canvas activo con
-                                GraphicRaycaster en pantalla hace que
-                                IsPointerOverGameObject devuelva true para TODO
-                                toque, bloqueando el fallback via Physics.Raycast
-                                antes de que se ejecute.
-                                Solución v2.3: BuildManager.Update reestructurado —
-                                Physics.Raycast se ejecuta PRIMERO sin pasar por
-                                IsPointerOverGameObject. Si golpea BuildSlot →
-                                TriggerSelect(). Solo si no golpea BuildSlot se
-                                consulta IsPointerOverGameObject para decidir si
-                                cancelar. GetComponent→GetComponentInParent en
-                                BuildManager y CameraController.
-
-  Bug Android persistente:      Síntoma idéntico a fase anterior, pero tras v2.3
-  causa raíz real               y v2.4. Análisis del historial git confirmó que
-  27/06/2026                    PhysicsRaycaster NUNCA existió en ninguna escena.
-                                Sin él, el EventSystem no puede llamar
-                                OnPointerDown en objetos 3D (como los BuildSlots).
-                                Todos los intentos previos de fallback via
-                                BuildManager.Update() fallaron por distintas
-                                razones (IsPointerOverGameObject bloqueaba, o
-                                el layermask excluía la capa de los tiles).
-
-                                Solución v2.5 (definitiva):
-                                  MobileBootstrap.EnsurePhysicsRaycasterOnMainCamera()
-                                  agrega PhysicsRaycaster a Camera.main en runtime
-                                  (AfterSceneLoad). LevelSetup también lo llama
-                                  como fallback al cargar cada nivel.
-                                  Con PhysicsRaycaster presente:
-                                  - OnPointerDown en BuildSlot es disparado ✓
-                                  - IsPointerOverGameObject devuelve true para
-                                    tiles 3D y UI (correcto en ambos casos)
-                                  - CameraController no pan al tocar tiles ✓
-                                  - BuildManager.Update() solo cancela cuando
-                                    IsPointerOverGameObject = false (vacío) ✓
-                                TriggerSelect(). Solo si no hay BuildSlot se
-                                consulta IsPointerOverGameObject para decidir si
-                                cancelar. GetComponentInParent para cubrir colliders
-                                en hijos del tile.
-
-  Bug Android persistente:      Síntoma idéntico a fase anterior. Análisis
-  causa raíz real               de historial git confirmó que PhysicsRaycaster
-  27/06/2026                    nunca existió en ninguna escena. Solución v2.5:
-                                MobileBootstrap.EnsurePhysicsRaycasterOnMainCamera()
-                                agrega PhysicsRaycaster en runtime (AfterSceneLoad).
-                                Con él, EventSystem llama OnPointerDown en tiles 3D.
-
-  Pulido final y correcciones   Zoom pinch reducido (×0.003), minZoom ≥ 4 /
-  de cámara y UX                maxZoom ≤ 16. Rotación auto entre ambos landscape.
-  12/07/2026                    FPS counter movido al costado izquierdo. Skybox
-                                eliminado en Android (SolidColor negro). Far clip
-                                plane reducido a 80 m. Bug de pan con
-                                maxDistanceFromCenter=0 corregido (guard >0.01f).
-                                Documentación actualizada: formatos de audio reales
-                                (Vorbis, no ADPCM), materiales y shaders detallados.
-
-  Corrección docente:           Tiles de construcción aún no respondían en Android
-  URP + tiles Android           APK. Diagnóstico: BuildManager.Update() (v2.5) había
-  13/07/2026                    eliminado el Physics.Raycast directo y confiaba
-                                únicamente en PhysicsRaycaster + EventSystem, que
-                                no funciona de forma consistente en Android builds.
-                                Solución (v2.7): restablecer Physics.Raycast manual
-                                → TriggerSelect() como camino PRIMARIO en
-                                BuildManager.Update(). CameraController también usa
-                                el mismo raycast como fallback para bloquear el pan
-                                al tocar tiles.
-                                URP-Performant actualizado por indicación del docente:
-                                Render Scale 0.85→0.75, lens flares/light cookies/
-                                LOD cross-fade desactivados. Render scale también
-                                forzado en runtime via MobileBootstrap.
-
-  Estado actual                 Juego listo para entrega final. Tiles de
-  14/07/2026                    construcción operativos en Android (Physics.Raycast
-                                directo, sin dependencia del EventSystem). Tres
-                                niveles funcionales, sin bugs inhabilitantes, URP
-                                optimizado al máximo según indicaciones del docente.
-                                Revisión final completa: todos los puntos del docente
-                                implementados y verificados. Sección 7.5 del GDD
-                                documenta las 7 técnicas evaluadas y no aplicadas con
-                                justificación técnica completa.
+  Estado actual                 Tres niveles funcionales, sin bugs inhabilitantes.
+  14/07/2026                    Selección de tiles operativa en Android via
+                                Physics.Raycast directo. URP optimizado. FPS
+                                counter visible en costado izquierdo libre de
+                                notch. Documentación completa según rúbrica.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

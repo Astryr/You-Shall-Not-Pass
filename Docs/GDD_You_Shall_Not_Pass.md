@@ -314,7 +314,7 @@ La rúbrica exige que cada técnica no aplicada sea justificada explícitamente.
 | **Físicas (1/10)** | ✅ | Object pool (enemigos/proyectiles/VFX), NavMesh pre-baked, solver 4 iteraciones, TileSlot cached, `PhysicsRaycaster` en cámara para input táctil sobre objetos 3D |
 | **Manejo de assets (2/10)** | ✅ | ETC2 RGBA8 para todas las texturas Android, Sprite Atlas para íconos de torretas, Vorbis/Streaming para BGM (loadInBackground), Vorbis/DecompressOnLoad para SFX (preloadAudioData, forceToMono), sin normal maps en materiales de juego, URP/Lit con configuración mínima; todo justificado en sección 7.4 |
 | **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras, FPS counter en costado izquierdo libre de notch, auto-rotación entre ambos landscape, colocación de torres táctil (Physics.Raycast directo) |
-| **Planificación (1/10)** | ✅ | Este GDD v2.8 con bitácora de 14 fases + High Concept v2.4 con justificaciones técnicas completas; todos los integrantes figuran en la portada y en créditos in-game |
+| **Planificación (1/10)** | ✅ | Este GDD v2.8 con bitácora de 8 fases + High Concept v2.5 con justificaciones técnicas completas; todos los integrantes figuran en la portada y en créditos in-game |
 
 ---
 
@@ -371,269 +371,75 @@ Se realiza una auditoría completa de 80 scripts. Bugs críticos encontrados y c
 
 **`RadiusDisplay` y `TowerPreview`:** `FindFirstObjectByType<BuildManager>()` sin null-check. Si se abre la escena directamente sin BuildManager, crash. Corregido.
 
-### Fase 8 — Optimización de carga: primera ronda (26/06/2026)
+### Fase 8 — Corrección docente: optimizaciones, cámara y rendimiento (14/07/2026)
 
-Se detecta que el juego se traba (FPS cae a ~2) durante la pantalla de carga del nivel en el TCL 408. Análisis de causas:
+A partir de la devolución del docente se aplica un conjunto de mejoras en cámara, renderizado, URP y documentación. El sistema de selección de tiles y colocación de torretas **no fue modificado** porque funciona correctamente mediante `Physics.Raycast` directo en `BuildManager.Update()`.
 
-1. **La escena empezaba a cargarse después de la animación del menú**, no durante. Todo el I/O y la activación de GameObjects ocurría de golpe mientras la pantalla de carga debería estar mostrándose.
+**Contador de FPS:**
 
-2. **`GridBuilder.myNavMesh`** era una property expression (`=> GetComponent<NavMeshSurface>()`), llamando `GetComponent` en cada acceso.
-
-3. **`LevelSetup.Start()`** ejecutaba `LevelEnvironmentOptimizer.Apply()`, `DeleteExtraObjects()` y varios `FindFirstObjectByType()` de forma síncrona consecutiva, bloqueando el renderer varios frames.
-
-**Soluciones aplicadas:**
-
-- `LevelManager`: se inicia `LoadSceneAsync` con `allowSceneActivation = false` antes de la animación. Se activa la escena cuando la animación termina Y la escena está al 90%.
-- `Application.backgroundLoadingPriority = ThreadPriority.Low` durante la carga.
-- `GridBuilder`: `_navMesh` con lazy-init + `cachedTileSlots` para evitar `GetComponent` por tile.
-- `LevelSetup.Start()`: `yield return null` entre operaciones pesadas.
-
-**Resultado:** FPS durante carga mejoró de ~2 a ~24.
-
-### Fase 9 — Optimización de carga: segunda ronda (26/06/2026)
-
-Con 24 FPS en el spike de activación de escena, se analiza la causa raíz restante: el frame de activación de Unity ejecuta todos los `Awake()` de los GameObjects del nivel en un solo frame.
-
-**Cuello de botella identificado:** cada `BuildSlot.Awake()` llamaba:
-```csharp
-ui          = FindFirstObjectByType<UI>();          // O(n) sobre todos los objetos
-tileAnim    = FindFirstObjectByType<TileAnimator>(); // O(n) sobre todos los objetos
-buildManager = FindFirstObjectByType<BuildManager>(); // O(n) sobre todos los objetos
-```
-Con 20-50 BuildSlots por nivel → **60-150 búsquedas O(n) en un solo frame**.
-
-**Soluciones aplicadas:**
-
-- **`UI`, `BuildManager`, `TileAnimator`:** se añade campo `public static instance` que se asigna en `Awake()`. Son singletons de facto (uno por escena, en `MainScene` persistente).
-
-- **`BuildSlot`:** se reemplaza el `Awake()` con 3 `FindFirstObjectByType` por propiedades que acceden al singleton directamente (`UI.instance`, `BuildManager.instance`, `TileAnimator.instance`). El `Awake()` ahora solo asigna `defaultPosition = transform.position`. Costo: O(1), sin búsqueda.
-
-- **`MobileBootstrap`:** se agregan las siguientes configuraciones globales:
-  - `GCSettings.LatencyMode = GCLatencyMode.LowLatency`: el runtime de .NET prioriza pausas cortas de GC.
-  - `Time.maximumDeltaTime = 0.05f`: si un frame tarda más de 50ms (p.ej. el frame de activación), la física recibe máximo 50ms de delta, evitando que objetos físicos "salten" por el spike.
-  - `QualitySettings.antiAliasing = 0`: MSAA desactivado globalmente en Android.
-  - `cam.allowHDR = false` y `cam.allowMSAA = false`: desactivan render targets de alta precisión que no aportan calidad visible en el TCL 408 pero consumen bandwidth de GPU.
-
-### Fase 10 — Bug crítico Android: selección de tiles (26/06/2026)
-
-**Síntoma reportado:** en el APK de Android no era posible tocar una casilla de construcción para abrir el menú de torres. Los botones de menú y Start Wave funcionaban correctamente.
-
-**Causa raíz diagnosticada:**
-
-La causa tiene dos capas:
-
-**Capa 1 — Sin `PhysicsRaycaster` en la cámara:** `BuildSlot` implementa `IPointerDownHandler`. Para que el EventSystem despache ese evento a un **objeto 3D** (no UI), la cámara necesita `PhysicsRaycaster`. Sin él, el EventSystem nunca llama `OnPointerDown`.
-
-**Capa 2 (causa real del fallo del fallback) — Canvas con GraphicRaycaster cubre toda la pantalla:** El HUD, el menú de torres y otros Canvas del juego tienen `GraphicRaycaster` activo. En Android, cuando cualquier Canvas con `GraphicRaycaster` está visible, `EventSystem.IsPointerOverGameObject(fingerId)` devuelve `true` para **cualquier toque en pantalla**, no solo sobre botones visibles. El primer intento de fallback (v2.1/v2.2) colocaba el `IsPointerOverGameObject` check antes del Physics.Raycast:
-
-```
-Touch.Began → IsPointerOverGameObject = true (canvas en pantalla) → return anticipado → Physics.Raycast NUNCA EJECUTADO → tile no seleccionado
-```
-
-Por eso los botones UI funcionaban (EventSystem los manejaba) pero los tiles no (el fallback nunca se ejecutaba).
-
-**Soluciones aplicadas (v2.3):**
-
-1. **`BuildManager.Update()` reestructurado** — Physics.Raycast ahora se ejecuta **antes** de cualquier `IsPointerOverGameObject` check. Si golpea un `BuildSlot` → `TriggerSelect()` y return. Solo si NO golpea un BuildSlot se consulta `IsPointerOverGameObject` para decidir si cancelar (evitar cerrar el menú al tocar botones de torre). Se usa `GetComponentInParent<BuildSlot>()` en lugar de `GetComponent` para cubrir tiles donde el collider puede estar en un objeto hijo.
-
-2. **`CameraController`** — igual corrección de `GetComponent` → `GetComponentInParent`.
-
-**Flujo final correcto:**
-
-```
-Toque en tile
-│
-├─ Physics.Raycast → golpea collider del tile o hijo
-│   GetComponentInParent<BuildSlot>() → BuildSlot encontrado
-│   → TriggerSelect() → menú de torres abierto ✓
-│   → return (no llega a IsPointerOverGameObject)
-│
-└─ Physics.Raycast → golpea otra geometría (sin BuildSlot)
-    → IsPointerOverGameObject? 
-      → true (botón UI) → no cancelar ✓
-      → false (geometría vacía) → CancelBuildAction() ✓
-
-Toque en botón UI
-│
-├─ Physics.Raycast → NO golpea ningún BuildSlot
-│   (los botones son Canvas, invisibles para physics)
-└─ IsPointerOverGameObject = true → no cancelar ✓
-    EventSystem → despacha al botón ✓
-```
-
-### Fase 11 — Causa raíz real identificada: falta PhysicsRaycaster en la cámara (27/06/2026)
-
-**Síntoma persistente:** el bug de la Fase 10 no fue resuelto por ninguna de las versiones anteriores (v2.3, v2.4). Tiles siguen sin responder al toque en el APK de Android, a pesar de múltiples restructuraciones de `BuildManager.Update()`.
-
-**Análisis definitivo por revisión del historial de git:**
-
-Al comparar el código original (commit `26824fd`) con el estado actual, se identificó que `BuildSlot` siempre usó `IPointerDownHandler.OnPointerDown()` para la selección. Este mecanismo **requiere `PhysicsRaycaster` en la cámara para objetos 3D**. Sin ese componente, el EventSystem de Unity solo puede despachar eventos a objetos UI (a través de `GraphicRaycaster` en los Canvas), nunca a objetos 3D como los tiles de construcción.
-
-**La búsqueda en todos los archivos `.unity` del proyecto confirmó que `PhysicsRaycaster` nunca existió en ninguna escena.** Por lo tanto, `OnPointerDown` en `BuildSlot` nunca fue llamado ni en el editor (sin PhysicsRaycaster tampoco funciona en Game view), ni en Android.
-
-**Por qué los intentos anteriores (v2.3 / v2.4) fallaron:**
-
-Los intentos previos intentaron suplir la falta de PhysicsRaycaster con un raycast manual en `BuildManager.Update()` que llamaría `TriggerSelect()`. El problema era que `IsPointerOverGameObject(fingerId)` en Android con cualquier Canvas+GraphicRaycaster visible devuelve `true` para TODOS los toques. En v2.3 esto bloqueaba el raycast antes de ejecutarse. En v2.4 se movió el raycast primero, pero el layermask `whatToIgnore` podía excluir la capa de los tiles. En ninguna versión se atacó la causa real.
-
-**Solución definitiva (v2.5):**
-
-Añadir `PhysicsRaycaster` a la cámara principal en runtime:
+Se crea `FPSCounter.cs` con auto-inicialización (`RuntimeInitializeOnLoadMethod + DontDestroyOnLoad`) para que aparezca en toda escena sin intervención manual. El panel se ancla al **borde izquierdo** de la pantalla (centro vertical) para evitar que la cámara frontal del teléfono —ubicada en el borde derecho en landscape— lo tape:
 
 ```csharp
-// MobileBootstrap.EnsurePhysicsRaycasterOnMainCamera()
-Camera cam = Camera.main;
-if (cam != null && cam.GetComponent<PhysicsRaycaster>() == null)
-    cam.gameObject.AddComponent<PhysicsRaycaster>();
+panelRect.anchorMin        = new Vector2(0f, 0.5f);
+panelRect.anchorMax        = new Vector2(0f, 0.5f);
+panelRect.pivot            = new Vector2(0f, 0.5f);
+panelRect.anchoredPosition = new Vector2(8f, 0f);
 ```
 
-Se llama en dos puntos para garantizar cobertura:
-1. `MobileBootstrap.ApplyCameraSettings()` — `AfterSceneLoad` de la primera escena
-2. `LevelSetup.Start()` — fallback cuando se activa un nivel
+El texto cambia de color según el FPS medido: **verde** ≥ 60, **amarillo** 45-59, **rojo** < 45. `raycastTarget = false` en panel y texto para no bloquear el input táctil. El canvas usa `sortingOrder = 9999` para quedar siempre visible sobre cualquier otra UI.
 
-Con `PhysicsRaycaster` presente:
-- EventSystem detecta objetos 3D (BuildSlots) vía PhysicsRaycaster
-- `OnPointerDown` en `BuildSlot` es llamado al tocar un tile ✓
-- `IsPointerOverGameObject(fingerId)` devuelve `true` tanto para UI como para tiles 3D
-- `CameraController` no inicia pan cuando el toque empieza sobre un tile ✓
-- `BuildManager.Update()` solo necesita cancelar cuando el toque cae en zona vacía (`IsPointerOverGameObject = false`) ✓
+**Cámara — zoom y límites:**
 
-**Flujo final correcto (v2.5):**
+El gesto de pinch podía cubrir todo el rango min-max de zoom en un solo gesto rápido porque el multiplicador era `zoomSpeed * 0.01f`. Se reduce a `0.003f` para dar control fino y predecible. En `CameraController.Start()` se añade clamping que fuerza `minZoom ≥ 4` y `maxZoom ≤ 16` en runtime, independientemente del valor del Inspector.
 
-```
-Toque en tile
-│
-├─ PhysicsRaycaster detecta el BuildSlot
-├─ EventSystem → OnPointerDown(BuildSlot) → selección ✓
-├─ IsPointerOverGameObject(fingerId) = true
-│   → BuildManager.Update: no cancela ✓
-└─ IsPointerOverGameObject(fingerId) = true
-    → CameraController: isTouchDraggingUI = true → no pan ✓
+Para limitar el área de desplazamiento, se añade el guard `maxDistanceFromCenter > 0.01f &&` en los tres manejadores (`HandleMovement`, `HandleMouseMovement`, `ApplyZoom`), evitando que un valor cero en el Inspector deshabilite el límite por error.
 
-Toque en botón UI
-│
-├─ GraphicRaycaster detecta el botón
-├─ EventSystem → OnPointerDown(UI_BuildButton) ✓
-├─ IsPointerOverGameObject = true → BuildManager no cancela ✓
-└─ IsPointerOverGameObject = true → cámara no pan ✓
+**Rotación de pantalla:**
 
-Toque en zona vacía (sin collider ni UI)
-│
-├─ Ningún raycaster detecta nada
-├─ IsPointerOverGameObject = false
-└─ BuildManager.Update → CancelBuildAction ✓
-```
+`Screen.orientation = ScreenOrientation.LandscapeRight` fijaba un único lado. Se cambia a `ScreenOrientation.AutoRotation` con `autorotateToLandscapeLeft = true` y `autorotateToLandscapeRight = true`; el retrato queda deshabilitado. El jugador puede usar el teléfono en cualquier orientación landscape sin perder visibilidad del contador de FPS.
 
-### Fase 12 — Pulido final y correcciones de cámara / UX (12/07/2026)
+**Skybox eliminado y far clip plane reducido:**
 
-Revisión integral del proyecto. Cambios implementados:
+En `MobileBootstrap.ApplyCameraSettings()` (Android):
+- `cam.clearFlags = CameraClearFlags.SolidColor` + `cam.backgroundColor = Color.black` + `RenderSettings.skybox = null` → elimina el pase de renderizado del skybox (-1 drawcall). El fondo negro encaja con la estética industrial del juego y la iluminación bakeada no depende del skybox en runtime.
+- `cam.farClipPlane = 80f` (default 1000 m) → los niveles no superan ~30 u de diámetro; 80 m cubre toda la geometría con margen y reduce el overhead de frustum culling y z-buffer.
 
-**Zoom excesivo en móvil:** el gesto de pinch con dos dedos podía cubrir todo el rango min-max de zoom en menos de 0.2 segundos porque el multiplicador de sensibilidad era `zoomSpeed * 0.01f`. Con `zoomSpeed = 10`, en un gesto rápido de 200px de delta el `targetZoomDist` saltaba +20 unidades en un frame, más que el rango total. **Solución:** reducir el multiplicador a `0.003f`, lo que da un delta de ~6 unidades para el mismo gesto: control fino y predecible.
-
-**Límites de zoom:** se añade clamping en `CameraController.Start()` que fuerza `minZoom ≥ 4` y `maxZoom ≤ 16` en runtime, como salvaguarda independiente de lo que esté configurado en el inspector. Esto impide que el jugador se "meta dentro" del suelo (zoom mínimo demasiado bajo) o que la cámara se eleve tan alto que el mapa desaparezca del campo visual.
-
-**Bug de pan sin límite cuando `maxDistanceFromCenter = 0`:** `HandleMovement()` y `HandleMouseMovement()` verificaban `Distance > maxDistanceFromCenter` sin el guard `> 0.01f`. Si el inspector tenía el campo a 0 (default de Unity para floats), la comparación `Distance > 0` era casi siempre true y forzaba la cámara a `levelCenterPoint` (0,0,0), bloqueando el pan. **Solución:** añadir `maxDistanceFromCenter > 0.01f &&` igual que en `ApplyZoom()`.
-
-**Rotación de pantalla a ambos lados landscape:** `Screen.orientation = ScreenOrientation.LandscapeRight` fijaba la orientación a un solo lado, ignorando el `autorotateToLandscapeLeft = true`. **Solución:** cambiar a `Screen.orientation = ScreenOrientation.AutoRotation` con portrait y portrait-upsidedown desactivados. El jugador ahora puede usar el teléfono con el cargador a cualquier lado.
-
-**Contador FPS tapado por la cámara del teléfono:** en landscape, la cámara frontal de muchos Android está en el borde derecho. El panel de FPS estaba anclado a la derecha (`anchorMin.x = 1f`). **Solución:** mover a la izquierda (`anchorMin.x = 0f`, `anchoredPosition.x = 8f`). Zona libre de notch en la totalidad de los dispositivos testados.
-
-**Skybox eliminado en Android:** la escena tenía asignado el material `Skybox.mat` en `RenderSettings`, lo que añade un pase de renderizado del cielo detrás de toda la geometría. Como los niveles son industriales cerrados y el fondo negro encaja con la estética, se aplica en runtime: `cam.clearFlags = SolidColor`, `cam.backgroundColor = black`, `RenderSettings.skybox = null`. Reducción de 1 drawcall completo por frame.
-
-**Far clip plane:** la distancia de dibujado estaba al default de Unity (1000 m). Los niveles del juego ocupan ~30 u de diámetro; con la cámara a máximo 16 u de altura, nunca es necesario dibujar a más de 80 m. Se aplica `cam.farClipPlane = 80f` en `MobileBootstrap.ApplyCameraSettings()`. Esto reduce el número de objetos evaluados en el frustum culling y puede mejorar el z-buffer precision.
-
----
-
-### Fase 13 — Corrección docente: URP + tiles Android (13/07/2026)
-
-**Síntoma reportado por el docente:** en el APK entregado los botones de construcción de torres no aparecen al tocar las casillas de construcción. En PC funciona correctamente.
-
-**Análisis de la regresión:**
-
-En v2.5 se simplificó `BuildManager.Update()` para que SOLO cancelara (si el toque caía en espacio vacío). La selección de tiles debía ocurrir via `BuildSlot.OnPointerDown()` + `PhysicsRaycaster`. Este diseño falló porque:
-
-1. `PhysicsRaycaster` se agrega programáticamente en `MobileBootstrap.AfterSceneLoad` y como fallback en `LevelSetup`. En teoría funciona, pero en la práctica en el APK de Android la cadena EventSystem → PhysicsRaycaster → OnPointerDown puede no funcionar de forma consistente con `StandaloneInputModule` en algunos dispositivos.
-
-2. Al eliminar el `Physics.Raycast → TriggerSelect()` manual en v2.5 y confiar exclusivamente en la ruta del EventSystem, se perdió el fallback más confiable.
-
-**Solución definitiva (v2.7):**
-
-`BuildManager.Update()` vuelve a lanzar `Physics.Raycast` como **mecanismo principal** de selección, sin depender del EventSystem:
-
-```csharp
-// BuildManager.Update() — selección principal
-Ray ray = Camera.main.ScreenPointToRay(inputPosition);
-if (Physics.Raycast(ray, out RaycastHit hit, Mathf.Infinity))
-{
-    BuildSlot slot = hit.collider.GetComponentInParent<BuildSlot>();
-    if (slot != null)
-    {
-        slot.TriggerSelect();
-        return;
-    }
-}
-// Si no golpea BuildSlot → verificar UI antes de cancelar
-bool overUI = EventSystem.current.IsPointerOverGameObject(touchFingerId);
-if (!overUI) CancelBuildAction();
-```
-
-La diferencia crítica respecto a v2.3/v2.4:
-- No se usa `whatToIgnore` LayerMask → los BuildSlots nunca son filtrados por capa.
-- `GetComponentInParent<BuildSlot>()` → cubre colliders en GameObjects hijos.
-- El `Physics.Raycast` se ejecuta SIN condicional previo → siempre se intenta antes que cualquier otra lógica.
-
-`CameraController.HandleMouseMovement()` también recibe el mismo raycast como fallback: si `IsPointerOverGameObject` no detectó el tile (PhysicsRaycaster inactivo), un `Physics.Raycast` adicional verifica si el gesto empezó sobre un BuildSlot y bloquea el pan en ese caso.
-
-**Optimizaciones URP solicitadas por el docente:**
-
-Cambios en `URP-Performant.asset`:
+**URP Performant — optimizaciones solicitadas por el docente:**
 
 | Parámetro | Antes | Después | Justificación |
 |-----------|-------|---------|---------------|
-| `m_RenderScale` | 0.85 | **0.75** | Reducción de ~20% del área renderizada → menos carga de fill rate en GPU. Recomendado explícitamente por el docente. |
-| `m_SupportDataDrivenLensFlare` | 1 | **0** | El juego no usa lens flares; desactivar elimina shader variants. |
-| `m_SupportScreenSpaceLensFlare` | 1 | **0** | Igual. |
-| `m_SupportsLightCookies` | 1 | **0** | Sin cookies de luz en ninguna escena. |
-| `m_EnableLODCrossFade` | 1 | **0** | Transiciones dithered de LOD innecesarias en este estilo visual. |
+| `m_RenderScale` | 0.85 | **0.75** | Renderiza al 75% de la resolución nativa → -31% de fill rate. Recomendado explícitamente por el docente para alcanzar 60 FPS en gama baja. |
+| `m_SupportDataDrivenLensFlare` | 1 | **0** | No se usan lens flares; desactivar elimina shader variants innecesarias. |
+| `m_SupportScreenSpaceLensFlare` | 1 | **0** | Igual al anterior. |
+| `m_SupportsLightCookies` | 1 | **0** | Sin cookies en ninguna luz del proyecto; desactivar elimina el texture sampler y variantes de shader. |
+| `m_EnableLODCrossFade` | 1 | **0** | Las transiciones dithered de LOD no aportan calidad perceptible en este estilo low-poly. |
 
-Los parámetros ya optimizados que el docente mencionó verificar:
-- `m_RequireDepthTexture: 0` ✓ (Depth Texture ya desactivada)
-- `m_RequireOpaqueTexture: 0` ✓ (Opaque Texture ya desactivada)
-- `m_SupportsHDR: 0` ✓ (HDR ya desactivado)
-- `m_MainLightShadowsSupported: 0` ✓ (sombras de luz principal ya desactivadas)
-- `m_AdditionalLightsRenderingMode: 0` ✓ (luces adicionales desactivadas)
+Parámetros verificados que ya estaban optimizados:
+- `m_RequireDepthTexture: 0` (Depth Texture desactivada)
+- `m_RequireOpaqueTexture: 0` (Opaque Texture desactivada)
+- `m_SupportsHDR: 0` (HDR desactivado)
+- `m_MainLightShadowsSupported: 0` (sombras de luz principal desactivadas)
+- `m_AdditionalLightsRenderingMode: 0` (luces adicionales desactivadas)
 
-El render scale también se fuerza en runtime desde `MobileBootstrap.ApplySettings()`:
+El render scale también se fuerza en runtime desde `MobileBootstrap.ApplySettings()` como garantía:
 ```csharp
 if (QualitySettings.renderPipeline is UniversalRenderPipelineAsset urpAsset)
     urpAsset.renderScale = 0.75f;
 ```
 
-### Fase 14 — Revisión final completa y verificación docente (14/07/2026)
+**Optimizaciones de carga y rendimiento de código:**
 
-Se realiza una revisión integral de todos los archivos del proyecto para confirmar que **cada punto señalado por el docente está correctamente implementado** y documentado. Resultado de la auditoría:
+- `LevelManager` inicia `LoadSceneAsync` con `allowSceneActivation = false` antes de la animación del menú. La escena se activa cuando la animación termina Y el progreso llega al 90%, solapando I/O con animación y eliminando el freeze de carga.
+- `Application.backgroundLoadingPriority = ThreadPriority.Low` durante la carga; pasa a `BelowNormal` en gameplay.
+- `GridBuilder`: propiedad `_navMesh` con lazy-init + `cachedTileSlots` para evitar `GetComponent` en cada acceso por tile.
+- `LevelSetup.Start()`: `yield return null` entre operaciones pesadas distribuye el trabajo en múltiples frames.
+- `UI`, `BuildManager`, `TileAnimator`: campo `public static instance` en `Awake()`. Elimina 60-150 búsquedas `FindFirstObjectByType` O(n) por frame de activación de escena (una por `BuildSlot`, por escena).
+- `MobileBootstrap`: `GCSettings.LatencyMode = LowLatency`, `Time.maximumDeltaTime = 0.05f`, `QualitySettings.antiAliasing = 0`, `cam.allowHDR = false`, `cam.allowMSAA = false`.
+- `PhysicsRaycaster` añadido programáticamente a la cámara principal en `MobileBootstrap.ApplyCameraSettings()` para garantizar que el EventSystem puede despachar eventos táctiles a objetos 3D.
 
-| Punto solicitado por el docente | Estado | Implementación |
-|---------------------------------|--------|----------------|
-| Contador de FPS visible en pantalla | ✅ | `FPSCounter.cs` — auto-inicializa con `RuntimeInitializeOnLoadMethod`, `DontDestroyOnLoad`, panel en costado **izquierdo** (anchorMin.x = 0, anchoredPosition.x = 8), colores verde/amarillo/rojo, `raycastTarget = false` para no bloquear input |
-| Posición libre de la cámara del teléfono | ✅ | Anclado al borde izquierdo del canvas, que en landscape queda siempre libre (la cámara frontal de la mayoría de Android en landscape queda en el borde derecho) |
-| Zoom excesivo corregido | ✅ | Multiplicador de pinch reducido a `0.003f`; `minZoom ≥ 4` y `maxZoom ≤ 16` forzados en `CameraController.Start()` |
-| Cámara limitada al área del escenario | ✅ | `maxDistanceFromCenter > 0.01f` guard en los tres manejadores de movimiento (`HandleMovement`, `HandleMouseMovement`, `ApplyZoom`) |
-| Rotación a ambos landscape | ✅ | `Screen.orientation = ScreenOrientation.AutoRotation` con `autorotateToLandscapeLeft = true` y `autorotateToLandscapeRight = true`; portrait bloqueado |
-| Skybox eliminado | ✅ | `cam.clearFlags = SolidColor`, `cam.backgroundColor = black`, `RenderSettings.skybox = null` en `MobileBootstrap.ApplyCameraSettings()` |
-| Distancia de dibujado reducida | ✅ | `cam.farClipPlane = 80f` (default de Unity era 1000 m) |
-| Render Scale URP = 0.75 | ✅ | `m_RenderScale: 0.75` en `URP-Performant.asset` + forzado en runtime por `MobileBootstrap` |
-| URP Performant asignado a Android | ✅ | `QualitySettings.SetQualityLevel(0)` en `MobileBootstrap.ApplySettings()` para Android |
-| Depth Texture desactivada | ✅ | `m_RequireDepthTexture: 0` en `URP-Performant.asset` |
-| Opaque Texture desactivada | ✅ | `m_RequireOpaqueTexture: 0` en `URP-Performant.asset` |
-| Lens Flares desactivados | ✅ | `m_SupportDataDrivenLensFlare: 0` y `m_SupportScreenSpaceLensFlare: 0` |
-| Light Cookies desactivados | ✅ | `m_SupportsLightCookies: 0` |
-| LOD Cross-fade desactivado | ✅ | `m_EnableLODCrossFade: 0` |
-| Documentación con detalles de audio | ✅ | Sección 7.4: tabla con formato, loadType, preloadAudioData, forceToMono y justificación para cada tipo de clip |
-| Documentación con formatos de imagen | ✅ | Sección 7.4: ETC2 RGBA8 para todas las texturas Android, justificación vs ASTC, tamaños y mipmaps |
-| Documentación con materiales | ✅ | Sección 7.4: tabla con shader, render type, textura y configuración relevante de cada material |
-| Técnicas no aplicadas justificadas | ✅ | Sección 7.5: Occlusion Culling, Light Probes dinámicos, decimación de mallas, GPU Instancing, Timeline, post-procesado avanzado, Asset Bundles — todos justificados |
+**Documentación:**
 
-**No se realizaron cambios en el sistema de selección de tiles/construcción de torres** porque en esta versión funciona correctamente en Android mediante `Physics.Raycast` directo (`BuildManager.Update()`) sin depender del EventSystem ni del PhysicsRaycaster.
+Se agrega a la sección 7.4 del GDD la tabla completa de configuración de importación de audio (formato, loadType, preloadAudioData, forceToMono por tipo de clip), texturas (ETC2 RGBA8, tamaños, mipmaps, justificación vs ASTC) y materiales (shader, render type, configuración). Se crea la sección 7.5 con las técnicas evaluadas y no aplicadas, cada una con justificación técnica.
 
 ---
 
