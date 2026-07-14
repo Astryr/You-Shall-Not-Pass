@@ -23,6 +23,12 @@ public class GameManager : MonoBehaviour
 
     private void Awake()
     {
+        if (instance != null && instance != this)
+        {
+            enabled = false;
+            Destroy(gameObject);
+            return;
+        }
         instance = this;
 
         inGameUI = FindFirstObjectByType<UI_InGame>(FindObjectsInactive.Include);

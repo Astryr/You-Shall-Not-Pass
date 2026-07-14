@@ -26,7 +26,14 @@ public class UI : MonoBehaviour
 
     private void Awake()
     {
+        if (instance != null && instance != this)
+        {
+            enabled = false;
+            Destroy(gameObject);
+            return;
+        }
         instance = this;
+
         buildButtonsUI = GetComponentInChildren<UI_BuildButtonsHolder>(true);
         settingsUI = GetComponentInChildren<UI_Settings>(true);
         mainMenuUI = GetComponentInChildren<UI_MainMenu>(true);

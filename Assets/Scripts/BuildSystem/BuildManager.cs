@@ -33,17 +33,26 @@ public class BuildManager : MonoBehaviour
 
     private void Awake()
     {
+        // Si ya existe una instancia de otro objeto (p.ej. un duplicado en la escena
+        // de nivel), este duplicado se destruye para que el BuildManager de MainScene
+        // sea siempre el singleton válido. Sin esta guarda, el duplicado sobreescribe
+        // 'instance' y cuando luego se destruye, 'instance' queda apuntando a un
+        // objeto destruido → Unity lo evalúa como null → TriggerSelect crash.
+        if (instance != null && instance != this)
+        {
+            enabled = false;
+            Destroy(gameObject);
+            return;
+        }
         instance = this;
+
         ui = FindFirstObjectByType<UI>();
         cameraEffects = FindFirstObjectByType<CameraEffects>();
 
-        // Autocompletar WaveManager si olvidaste asignarlo en el inspector
         if (waveManager == null)
-        {
             waveManager = FindFirstObjectByType<WaveManager>();
-        }
 
-        MakeBuildSlotNotAvalibleIfNeeded(waveManager,currentGrid);
+        MakeBuildSlotNotAvalibleIfNeeded(waveManager, currentGrid);
     }
 
     private void Start()
