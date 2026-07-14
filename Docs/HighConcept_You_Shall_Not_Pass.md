@@ -1,5 +1,5 @@
 HIGH CONCEPT — You Shall Not Pass!
-Versión 2.4 — Entrega Final — 13/07/2026
+Versión 2.5 — Entrega Final — 14/07/2026
 
 Integrantes:
   Herrera, Oriana    — Project Manager · Artista 3D
@@ -490,10 +490,14 @@ BITÁCORA DE DESARROLLO
                                 forzado en runtime via MobileBootstrap.
 
   Estado actual                 Juego listo para entrega final. Tiles de
-  13/07/2026                    construcción operativos en Android (Physics.Raycast
+  14/07/2026                    construcción operativos en Android (Physics.Raycast
                                 directo, sin dependencia del EventSystem). Tres
                                 niveles funcionales, sin bugs inhabilitantes, URP
                                 optimizado al máximo según indicaciones del docente.
+                                Revisión final completa: todos los puntos del docente
+                                implementados y verificados. Sección 7.5 del GDD
+                                documenta las 7 técnicas evaluadas y no aplicadas con
+                                justificación técnica completa.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

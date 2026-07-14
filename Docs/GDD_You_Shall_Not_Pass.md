@@ -1,7 +1,7 @@
 # GDD — You Shall Not Pass!
 
-**Versión:** 2.7 (entrega final)
-**Fecha:** 13/07/2026
+**Versión:** 2.8 (entrega final — revisión completa)
+**Fecha:** 14/07/2026
 **Motor:** Unity 6000.3.11f1 — Universal Render Pipeline (URP)
 **Plataforma:** Android — dispositivo de referencia: TCL 408 (720×1600 px, gama baja)
 
@@ -289,16 +289,32 @@ Todos los iconos de las 7 torretas están en un único Sprite Atlas. Esto reduce
 
 ---
 
+### 7.5 Técnicas evaluadas y NO aplicadas — justificación
+
+La rúbrica exige que cada técnica no aplicada sea justificada explícitamente. Las siguientes técnicas fueron evaluadas y descartadas por las razones indicadas:
+
+| Técnica | Motivo de no aplicación |
+|---------|------------------------|
+| **Occlusion Culling estático** | Los niveles son grillas abiertas con pocos objetos grandes. El área visible desde la cámara (fija, isométrica, ~30 u de diámetro) es casi la totalidad del nivel. Los portales de oclusión generarían overhead de CPU sin beneficio medible porque no hay paredes ni estructuras cerradas que dividan visualmente el mapa. Se optó por Far Clip Plane reducido (80 m) + frustum culling automático de Unity como alternativa más eficiente para este tipo de nivel. |
+| **Light Probes para objetos dinámicos** | Los enemigos son objetos dinámicos que podrían recibir iluminación de Light Probes. Sin embargo, los niveles tienen iluminación bakeada de una única luz direccional; agregar una red de Light Probes añadiría complejidad de escena y memoria de textura sin cambio visual perceptible en modelos de estilo low-poly con materiales de color plano. La iluminación de los enemigos se resuelve con el Ambient Light global, suficiente para el estilo visual del juego. |
+| **Topology / decimación de mallas** | Los modelos 3D del proyecto son assets de bajo polígono por diseño artístico (estilo low-poly). Las topologías ya tienen el mínimo de triángulos necesario para representar la forma. No se realizó decimación adicional porque hacerlo rompería la silueta visual del estilo elegido. |
+| **GPU Instancing manual** | Los materiales tienen `m_EnableInstancingVariants: 0` porque el proyecto usa Static Batching (objetos del nivel marcados como estáticos). Unity combina automáticamente los batches estáticos en un único draw call por material, lo que es más eficiente que instancing manual para geometría fija como tiles, caminos y estructuras. GPU Instancing sería ventajoso para objetos dinámicos en gran cantidad (p. ej. 100+ enemigos idénticos); en este juego hay máximo 20-30 enemigos simultáneos de hasta 9 tipos distintos, por lo que el overhead de instancing no justifica el beneficio. |
+| **Timeline (Cinemática)** | El juego no tiene cinematics ni secuencias animadas pre-definidas. Las transiciones de UI (menú, carga, victoria/derrota) se manejan con `UI_Animator` (corrutinas de posición/alpha) que son más livianas que un clip de Timeline para movimientos simples. El uso de Timeline para una pantalla de menú sería sobredimensionamiento sin mejora de experiencia. |
+| **Post-procesado avanzado (DoF, Motion Blur, SSAO)** | Depth of Field y Motion Blur requieren la textura de profundidad (`m_RequireDepthTexture`) que está deliberadamente desactivada en URP-Performant para ahorrar un render target completo (~2 MB en 720p). SSAO (Screen Space Ambient Occlusion) añade un pass completo de renderizado; en el TCL 408 ese pass solo representa degradación de FPS. Se mantiene únicamente el Bloom que ya está en el perfil Performant y cuya implementación en URP es liviana (un blit post-procesado). |
+| **Asset Bundles / Addressables** | La descarga dinámica de contenido no aplica a este proyecto; todo el contenido está incluido en el APK. Los Asset Bundles serían necesarios si hubiera DLC, actualizaciones OTA o contenido descargable. El tamaño del APK es manejable sin fragmentación de contenido. |
+
+---
+
 ## 8. Rubrica — Autoevaluación
 
 | Apartado | Estado | Evidencia |
 |----------|--------|-----------|
-| **Optimización en engine/off game (2/10)** | ✅ | IL2CPP/ARM64, async loading, backgroundLoadingPriority, object pool, URP Performant, render scale 0.75, minify, skybox eliminado, far clip plane 80m, singleton managers, GC LowLatency, lens flares/light cookies/LOD cross-fade desactivados |
-| **Iluminación (2/10)** | ✅ | `LevelEnvironmentOptimizer`: 1 luz direccional, sin puntuales/spot, shadow distance 15m, LOD bias 0.7, lightmaps bakeados en las 3 escenas, reflection probes por nivel |
+| **Optimización en engine/off game (2/10)** | ✅ | IL2CPP/ARM64, async loading, backgroundLoadingPriority, object pool, URP Performant, render scale 0.75, minify, skybox eliminado, far clip plane 80m, singleton managers, GC LowLatency, lens flares/light cookies/LOD cross-fade desactivados. Técnicas no aplicadas y justificadas: oclusión estática (no aplica; ver sección 7.5). |
+| **Iluminación (2/10)** | ✅ | `LevelEnvironmentOptimizer`: 1 luz direccional, sin puntuales/spot, shadow distance 15m, LOD bias 0.7, lightmaps bakeados en las 3 escenas, reflection probes por nivel. Técnicas no aplicadas y justificadas: Light Probes para objetos dinámicos (ver sección 7.5). |
 | **Físicas (1/10)** | ✅ | Object pool (enemigos/proyectiles/VFX), NavMesh pre-baked, solver 4 iteraciones, TileSlot cached, `PhysicsRaycaster` en cámara para input táctil sobre objetos 3D |
 | **Manejo de assets (2/10)** | ✅ | ETC2 RGBA8 para todas las texturas Android, Sprite Atlas para íconos de torretas, Vorbis/Streaming para BGM (loadInBackground), Vorbis/DecompressOnLoad para SFX (preloadAudioData, forceToMono), sin normal maps en materiales de juego, URP/Lit con configuración mínima; todo justificado en sección 7.4 |
-| **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras, FPS counter en costado izquierdo libre de notch, auto-rotación entre ambos landscape, **colocación de torres táctil corregida** (Physics.Raycast directo, sin dependencia del EventSystem/PhysicsRaycaster) |
-| **Planificación (1/10)** | ✅ | Este GDD v2.6 con bitácora de 12 fases + High Concept con justificaciones técnicas completas; todos los integrantes figuran en la portada y en créditos in-game |
+| **Accesibilidad (2/10)** | ✅ | Tutorial con objetivo+controles+tips, HUD siempre visible, señalización de slots, SFX de feedback, pantallas de resultado claras, FPS counter en costado izquierdo libre de notch, auto-rotación entre ambos landscape, colocación de torres táctil (Physics.Raycast directo) |
+| **Planificación (1/10)** | ✅ | Este GDD v2.8 con bitácora de 14 fases + High Concept v2.4 con justificaciones técnicas completas; todos los integrantes figuran en la portada y en créditos in-game |
 
 ---
 
@@ -591,6 +607,33 @@ El render scale también se fuerza en runtime desde `MobileBootstrap.ApplySettin
 if (QualitySettings.renderPipeline is UniversalRenderPipelineAsset urpAsset)
     urpAsset.renderScale = 0.75f;
 ```
+
+### Fase 14 — Revisión final completa y verificación docente (14/07/2026)
+
+Se realiza una revisión integral de todos los archivos del proyecto para confirmar que **cada punto señalado por el docente está correctamente implementado** y documentado. Resultado de la auditoría:
+
+| Punto solicitado por el docente | Estado | Implementación |
+|---------------------------------|--------|----------------|
+| Contador de FPS visible en pantalla | ✅ | `FPSCounter.cs` — auto-inicializa con `RuntimeInitializeOnLoadMethod`, `DontDestroyOnLoad`, panel en costado **izquierdo** (anchorMin.x = 0, anchoredPosition.x = 8), colores verde/amarillo/rojo, `raycastTarget = false` para no bloquear input |
+| Posición libre de la cámara del teléfono | ✅ | Anclado al borde izquierdo del canvas, que en landscape queda siempre libre (la cámara frontal de la mayoría de Android en landscape queda en el borde derecho) |
+| Zoom excesivo corregido | ✅ | Multiplicador de pinch reducido a `0.003f`; `minZoom ≥ 4` y `maxZoom ≤ 16` forzados en `CameraController.Start()` |
+| Cámara limitada al área del escenario | ✅ | `maxDistanceFromCenter > 0.01f` guard en los tres manejadores de movimiento (`HandleMovement`, `HandleMouseMovement`, `ApplyZoom`) |
+| Rotación a ambos landscape | ✅ | `Screen.orientation = ScreenOrientation.AutoRotation` con `autorotateToLandscapeLeft = true` y `autorotateToLandscapeRight = true`; portrait bloqueado |
+| Skybox eliminado | ✅ | `cam.clearFlags = SolidColor`, `cam.backgroundColor = black`, `RenderSettings.skybox = null` en `MobileBootstrap.ApplyCameraSettings()` |
+| Distancia de dibujado reducida | ✅ | `cam.farClipPlane = 80f` (default de Unity era 1000 m) |
+| Render Scale URP = 0.75 | ✅ | `m_RenderScale: 0.75` en `URP-Performant.asset` + forzado en runtime por `MobileBootstrap` |
+| URP Performant asignado a Android | ✅ | `QualitySettings.SetQualityLevel(0)` en `MobileBootstrap.ApplySettings()` para Android |
+| Depth Texture desactivada | ✅ | `m_RequireDepthTexture: 0` en `URP-Performant.asset` |
+| Opaque Texture desactivada | ✅ | `m_RequireOpaqueTexture: 0` en `URP-Performant.asset` |
+| Lens Flares desactivados | ✅ | `m_SupportDataDrivenLensFlare: 0` y `m_SupportScreenSpaceLensFlare: 0` |
+| Light Cookies desactivados | ✅ | `m_SupportsLightCookies: 0` |
+| LOD Cross-fade desactivado | ✅ | `m_EnableLODCrossFade: 0` |
+| Documentación con detalles de audio | ✅ | Sección 7.4: tabla con formato, loadType, preloadAudioData, forceToMono y justificación para cada tipo de clip |
+| Documentación con formatos de imagen | ✅ | Sección 7.4: ETC2 RGBA8 para todas las texturas Android, justificación vs ASTC, tamaños y mipmaps |
+| Documentación con materiales | ✅ | Sección 7.4: tabla con shader, render type, textura y configuración relevante de cada material |
+| Técnicas no aplicadas justificadas | ✅ | Sección 7.5: Occlusion Culling, Light Probes dinámicos, decimación de mallas, GPU Instancing, Timeline, post-procesado avanzado, Asset Bundles — todos justificados |
+
+**No se realizaron cambios en el sistema de selección de tiles/construcción de torres** porque en esta versión funciona correctamente en Android mediante `Physics.Raycast` directo (`BuildManager.Update()`) sin depender del EventSystem ni del PhysicsRaycaster.
 
 ---
 
