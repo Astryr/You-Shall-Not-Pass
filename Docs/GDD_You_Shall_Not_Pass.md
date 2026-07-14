@@ -437,6 +437,33 @@ if (QualitySettings.renderPipeline is UniversalRenderPipelineAsset urpAsset)
 - `MobileBootstrap`: `GCSettings.LatencyMode = LowLatency`, `Time.maximumDeltaTime = 0.05f`, `QualitySettings.antiAliasing = 0`, `cam.allowHDR = false`, `cam.allowMSAA = false`.
 - `PhysicsRaycaster` añadido programáticamente a la cámara principal en `MobileBootstrap.ApplyCameraSettings()` para garantizar que el EventSystem puede despachar eventos táctiles a objetos 3D.
 
+**Bug crítico: `BuildManager.instance` null en `TriggerSelect()` (inhabilitante):**
+
+**Síntoma:** al tocar un tile de construcción en Android, el juego lanzaba `BuildManager.instance es null` y no abría el menú de torres. El error aparecía en el stack: `BuildSlot.TriggerSelect() ← BuildManager.Update()`.
+
+**Causa raíz:** el patrón singleton `instance = this` sin guard de duplicados sobreescribía `instance` cuando la escena de nivel cargaba su propio `BuildManager`. Si ese objeto era destruido posteriormente (por `extraObjectsToDelete` o `DestroyDuplicateUICanvases`), `instance` quedaba apuntando a un objeto destruido que Unity evalúa como `null`. El `BuildManager` de MainScene seguía corriendo `Update()`, pero `BuildManager.instance` ya no era él.
+
+El mismo patrón defectuoso afectaba también `TileAnimator`, `GameManager` y `UI`.
+
+**Solución:** agregar la guarda estándar de singleton en los cuatro `Awake()`:
+
+```csharp
+if (instance != null && instance != this)
+{
+    enabled = false;    // evita que Update() corra en el duplicado
+    Destroy(gameObject);
+    return;
+}
+instance = this;
+```
+
+Con esta guarda:
+- El primer objeto de la clase (MainScene) toma el singleton y nunca lo suelta.
+- Cualquier duplicado en escenas de nivel se auto-destruye sin ejecutar ninguna lógica.
+- `BuildManager.instance`, `TileAnimator.instance`, `GameManager.instance` y `UI.instance` son siempre válidos mientras MainScene está cargado.
+
+`AudioManager` y `ObjectPoolManager` ya tenían la guarda correcta (`if (instance == null)`) y no requirieron cambios.
+
 **Documentación:**
 
 Se agrega a la sección 7.4 del GDD la tabla completa de configuración de importación de audio (formato, loadType, preloadAudioData, forceToMono por tipo de clip), texturas (ETC2 RGBA8, tamaños, mipmaps, justificación vs ASTC) y materiales (shader, render type, configuración). Se crea la sección 7.5 con las técnicas evaluadas y no aplicadas, cada una con justificación técnica.
