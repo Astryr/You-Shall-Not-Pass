@@ -42,6 +42,11 @@ public class CameraController : MonoBehaviour
     // Distancia objetivo cámara↔punto de foco; se actualiza con scroll/pinch y se aplica cada frame.
     private float targetZoomDist = -1f;
 
+    // Durante el gesto de pinch (dos dedos) se fija el punto de foco del PRIMER frame
+    // del gesto para que ApplyZoom no derive la cámara conforme el raycast cambia de hit.
+    private bool isPinching = false;
+    private Vector3 pinnedFocusPoint;
+
     private void Start()
     {
         // Reforzar límites de zoom seguros en runtime para evitar que el jugador
@@ -92,6 +97,15 @@ public class CameraController : MonoBehaviour
         // Pinch con dos dedos (móvil).
         if (Input.touchCount == 2)
         {
+            // Primer frame del gesto: fijamos el punto de foco actual.
+            // A partir de aquí ApplyZoom() usará este punto fijo, evitando que
+            // el raycast de RefreshFocusPoint() derive la cámara a posiciones aleatorias.
+            if (!isPinching)
+            {
+                pinnedFocusPoint = GetVirtualFocusPoint();
+                isPinching = true;
+            }
+
             Touch t1 = Input.GetTouch(0);
             Touch t2 = Input.GetTouch(1);
 
@@ -101,12 +115,12 @@ public class CameraController : MonoBehaviour
             float curMag  = Vector2.Distance(t1.position, t2.position);
 
             // 0.003f en lugar de 0.01f: reduce la sensibilidad del pinch ~70%.
-            // En un gesto rápido de 200px el delta por frame era ~20 unidades (cubriendo
-            // casi todo el rango min-max de un golpe). Ahora da ~6 unidades: manejable.
             delta = (prevMag - curMag) * zoomSpeed * 0.003f;
         }
         else
         {
+            isPinching = false;
+
             // Rueda del mouse (PC); scroll hacia adelante = zoom in = delta negativo en distancia.
             float scroll = Input.GetAxis("Mouse ScrollWheel");
             if (Mathf.Approximately(scroll, 0f))
@@ -124,7 +138,9 @@ public class CameraController : MonoBehaviour
     // Mueve la cámara suavemente hacia la distancia de zoom objetivo; se llama cada frame.
     private void ApplyZoom()
     {
-        Vector3 fp = GetVirtualFocusPoint();
+        // Durante el pinch usamos el punto de foco fijado al inicio del gesto;
+        // esto impide que el raycast variable derive la posición de la cámara.
+        Vector3 fp = isPinching ? pinnedFocusPoint : GetVirtualFocusPoint();
         Vector3 dir = transform.position - fp;
 
         if (dir.sqrMagnitude < 0.0001f)
@@ -222,7 +238,12 @@ public class CameraController : MonoBehaviour
 
     // Pan con 1 dedo (móvil) o botón central del mouse (PC). Ignora el gesto si empezó sobre UI.
     private void HandleMouseMovement()
-    { 
+    {
+        // Con dos o más dedos en pantalla (gesto de pinch/zoom), bloquear el pan completamente.
+        // Sin esta guarda, la llegada o salida del segundo dedo puede disparar un pan involuntario.
+        if (Input.touchCount >= 2)
+            return;
+
         if (Input.touchCount == 1)
         {
             Touch touch = Input.GetTouch(0);
